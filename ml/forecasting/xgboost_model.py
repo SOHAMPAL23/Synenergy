@@ -26,12 +26,12 @@ class XGBoostModel(BaseModel):
         self.xgb_cfg = self._cfg.forecasting.models.xgboost
         self._model = xgb.XGBRegressor(
             n_estimators=self.xgb_cfg.get("n_estimators", 200),
-            learning_rate=xgb_cfg.get("learning_rate", 0.05),
-            max_depth=xgb_cfg.get("max_depth", 6),
-            subsample=xgb_cfg.get("subsample", 0.8),
-            colsample_bytree=xgb_cfg.get("colsample_bytree", 0.8),
-            n_jobs=xgb_cfg.get("n_jobs", -1),
-            verbosity=xgb_cfg.get("verbosity", 0),
+            learning_rate=self.xgb_cfg.get("learning_rate", 0.05),
+            max_depth=self.xgb_cfg.get("max_depth", 6),
+            subsample=self.xgb_cfg.get("subsample", 0.8),
+            colsample_bytree=self.xgb_cfg.get("colsample_bytree", 0.8),
+            n_jobs=self.xgb_cfg.get("n_jobs", -1),
+            verbosity=self.xgb_cfg.get("verbosity", 0),
             random_state=self._cfg.forecasting.random_state,
             eval_metric="rmse",
         )
@@ -45,9 +45,18 @@ class XGBoostModel(BaseModel):
         logger.info("[%s] Fitting on %d samples, %d features.", self.name, *X_train.shape)
         self._feature_names = list(X_train.columns)
 
-        if self.xgb_cfg.get("tuning", False) and "param_grid" in self.xgb_cfg:
+        if self.xgb_cfg.get("tuning", True):
             logger.info("[%s] Hyperparameter fine-tuning enabled. Running RandomizedSearchCV...", self.name)
-            param_grid = {k: list(v) for k, v in self.xgb_cfg["param_grid"].items()}
+            
+            default_grid = {
+                "n_estimators": [100, 300, 500],
+                "learning_rate": [0.01, 0.05, 0.1],
+                "max_depth": [4, 6, 8],
+                "subsample": [0.7, 0.9],
+                "colsample_bytree": [0.7, 0.9]
+            }
+            raw_grid = self.xgb_cfg.get("param_grid", default_grid)
+            param_grid = {k: list(v) for k, v in raw_grid.items()}
             
             search = RandomizedSearchCV(
                 estimator=xgb.XGBRegressor(
