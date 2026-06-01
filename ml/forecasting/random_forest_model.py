@@ -37,7 +37,35 @@ class RandomForestModel(BaseModel):
 
     def fit(self, X_train: pd.DataFrame, y_train: pd.Series) -> "RandomForestModel":
         logger.info("[%s] Fitting on %d samples, %d features.", self.name, *X_train.shape)
-        self._model.fit(X_train, y_train)
+        
+        from sklearn.model_selection import RandomizedSearchCV
+        rf_cfg = self._cfg.forecasting.models.random_forest
+        if rf_cfg.get("tuning", True):
+            logger.info("[%s] Hyperparameter fine-tuning enabled. Running RandomizedSearchCV...", self.name)
+            default_grid = {
+                "n_estimators": [100, 200, 300],
+                "max_depth": [10, 20, None],
+                "min_samples_split": [2, 5, 10],
+                "min_samples_leaf": [1, 2, 4]
+            }
+            raw_grid = rf_cfg.get("param_grid", default_grid)
+            param_grid = {k: list(v) for k, v in raw_grid.items()}
+            
+            search = RandomizedSearchCV(
+                estimator=RandomForestRegressor(random_state=self._cfg.forecasting.random_state),
+                param_distributions=param_grid,
+                n_iter=10,
+                scoring="neg_root_mean_squared_error",
+                cv=3,
+                random_state=self._cfg.forecasting.random_state,
+                n_jobs=-1
+            )
+            search.fit(X_train, y_train)
+            logger.info("[%s] Best parameters found: %s", self.name, search.best_params_)
+            self._model = search.best_estimator_
+        else:
+            self._model.fit(X_train, y_train)
+            
         self._is_fitted = True
         logger.info("[%s] Fitting complete.", self.name)
         return self
