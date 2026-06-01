@@ -1,0 +1,136 @@
+
+# EnerVision AI - Pipeline Configuration
+project:
+  name: "EnerVision AI"
+  version: "1.0.0"
+  description: "Energy Consumption Forecasting & Optimization System"
+
+data:
+  raw_dir: "data"
+  primary_file: "time_series_60min_singleindex.csv"
+  processed_dir: "ml/outputs/processed"
+  models_dir: "ml/outputs/models"
+  reports_dir: "ml/outputs/reports"
+  plots_dir: "ml/outputs/plots"
+
+  # Target column from the dataset
+  target_column: "DE_load_actual_entsoe_transparency"
+  timestamp_column: "utc_timestamp"
+
+  # Exogenous features to include
+  exog_columns:
+    - "DE_solar_generation_actual"
+    - "DE_wind_generation_actual"
+    - "DE_wind_offshore_generation_actual"
+    - "DE_wind_onshore_generation_actual"
+
+  # Schema validation
+  required_columns:
+    - "utc_timestamp"
+    - "DE_load_actual_entsoe_transparency"
+
+  # Data loading limits (null = all rows)
+  max_rows: 50000
+  start_date: "2015-01-01"
+  end_date: "2020-12-31"
+
+preprocessing:
+  missing_value_strategy: "interpolate"   # options: drop, interpolate, ffill, bfill
+  outlier_method: "iqr"                   # options: zscore, iqr
+  outlier_threshold: 3.0
+  iqr_multiplier: 1.5
+  duplicate_strategy: "drop_first"
+
+feature_engineering:
+  lag_hours: [1, 24, 168]
+  rolling_windows: [7, 30]                # in hours for 60-min data
+  include_holidays: true
+  holiday_country: "DE"
+
+forecasting:
+  test_size: 0.2
+  validation_size: 0.1
+  random_state: 42
+  cv_folds: 5
+
+  models:
+    linear_regression:
+      enabled: true
+    random_forest:
+      enabled: true
+      n_estimators: 100
+      max_depth: 10
+      min_samples_split: 5
+      n_jobs: -1
+    xgboost:
+      enabled: true
+      tuning: true
+      n_estimators: 200
+      learning_rate: 0.05
+      max_depth: 6
+      subsample: 0.8
+      colsample_bytree: 0.8
+      n_jobs: -1
+      verbosity: 0
+      param_grid:
+        n_estimators: [100, 200, 300]
+        learning_rate: [0.01, 0.05, 0.1]
+        max_depth: [4, 6, 8]
+        subsample: [0.8, 1.0]
+        colsample_bytree: [0.8, 1.0]
+    arima:
+      enabled: true
+      order: [2, 1, 2]
+      max_iter: 50
+    sarima:
+      enabled: true
+      order: [1, 1, 1]
+      seasonal_order: [1, 1, 1, 24]
+      max_iter: 50
+    sarimax:
+      enabled: true
+      order: [1, 1, 1]
+      seasonal_order: [1, 1, 1, 24]
+      max_iter: 50
+
+  forecast_horizons:
+    short: 24     # hours
+    medium: 168   # 7 days in hours
+    long: 720     # 30 days in hours
+
+  metrics: ["rmse", "mae", "mape"]
+
+anomaly_detection:
+  methods: ["zscore", "iqr", "isolation_forest", "lof", "one_class_svm"]
+  zscore_threshold: 3.0
+  iqr_multiplier: 1.5
+  isolation_forest:
+    contamination: 0.05
+    random_state: 42
+    n_estimators: 100
+  lof:
+    n_neighbors: 20
+    contamination: 0.05
+  one_class_svm:
+    nu: 0.05
+    kernel: "rbf"
+    gamma: "scale"
+
+explainability:
+  max_samples: 500
+  background_samples: 100
+  plot_top_features: 20
+  save_plots: true
+
+recommendation:
+  peak_hours: [15, 16, 17, 18]           # 3 PM - 6 PM
+  hvac_contribution_threshold: 0.30
+  high_consumption_percentile: 90
+  low_consumption_percentile: 10
+  load_shift_threshold_mw: 5000
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s | %(name)s | %(levelname)s | %(message)s"
+  log_dir: "ml/outputs/logs"
+  log_file: "enevision_pipeline.log"
