@@ -11,6 +11,10 @@ scikit-learn>=1.3.0
 xgboost>=2.0.0
 joblib>=1.3.0
 
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
 # Time-series statistical models
 statsmodels>=0.14.0
 

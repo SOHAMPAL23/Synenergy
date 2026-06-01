@@ -22,6 +22,7 @@ from ml.models.serializer import ModelSerializer
 from ml.utils.config_loader import config
 from ml.utils.helpers import time_split, ensure_dir
 from ml.utils.logger import get_logger, PipelineLogger
+from ml.utils.visualizer import Visualizer
 
 logger = get_logger(__name__)
 
@@ -115,6 +116,8 @@ class EnerVisionPipeline:
         recommendations = self._stage_recommend(
             forecasts, df_clean, anomaly_df, shap_importance
         )
+        # ── Stage 10: Visualizations ───────────────────────────────────
+        self._stage_visualize(df_clean, forecasts, anomaly_df, shap_importance, metrics)
 
         # ── Serialize all outputs ──────────────────────────────────────
         self._stage_serialize(
@@ -305,3 +308,32 @@ class EnerVisionPipeline:
                 "forecast_horizons": list(forecasts.keys()),
             }
             ser.save_metadata(metadata)
+
+    def _stage_visualize(
+        self,
+        df_clean: pd.DataFrame,
+        forecasts: Dict,
+        anomaly_df: pd.DataFrame,
+        shap_importance: Optional[pd.DataFrame],
+        metrics: Dict,
+    ) -> None:
+        with PipelineLogger(logger, "Stage 10: Visualizations"):
+            visualizer = Visualizer(cfg=self._cfg)
+            target_col = self._cfg.data.target_column
+            
+            # 1. Model comparison
+            if metrics:
+                visualizer.plot_model_comparison(metrics)
+                
+            # 2. Forecasts vs actuals
+            for horizon, fc_df in forecasts.items():
+                visualizer.plot_forecast(df_clean, fc_df, horizon, target_col)
+                
+            # 3. Anomalies
+            if not anomaly_df.empty:
+                visualizer.plot_anomalies(anomaly_df, target_col)
+                
+            # 4. Feature importance
+            if shap_importance is not None:
+                visualizer.plot_feature_importance(shap_importance)
+
