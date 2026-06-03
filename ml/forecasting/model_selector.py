@@ -95,12 +95,13 @@ class ModelSelector:
                 if not self._is_enabled(key):
                     continue
                 try:
-                    # Limit stat model training size for performance
+                    # Limit stat model training and test size for performance
                     max_stat_rows = 5000
+                    max_test_rows = 2000
                     y_tr = y_train.iloc[-max_stat_rows:] if len(y_train) > max_stat_rows else y_train
                     X_tr = stat_X_train.iloc[-max_stat_rows:] if len(stat_X_train) > max_stat_rows else stat_X_train
-                    y_te = y_test
-                    X_te = stat_X_test
+                    y_te = y_test.iloc[:max_test_rows] if len(y_test) > max_test_rows else y_test
+                    X_te = stat_X_test.iloc[:max_test_rows] if len(stat_X_test) > max_test_rows else stat_X_test
 
                     model = ModelClass()
                     model.fit(X_tr, y_tr)
