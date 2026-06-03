@@ -15,7 +15,7 @@ from ml.anomaly_detection.anomaly_detector import AnomalyDetector
 
 def _make_series_with_anomalies(n: int = 500) -> pd.DataFrame:
     """Return a DataFrame with known anomaly spikes injected."""
-    idx = pd.date_range("2020-01-01", periods=n, freq="H", tz="UTC")
+    idx = pd.date_range("2020-01-01", periods=n, freq="h", tz="UTC")
     signal = np.random.normal(50000, 3000, n)
     # Inject obvious anomalies at known positions
     anomaly_positions = [50, 150, 300, 400]
@@ -80,7 +80,7 @@ class TestAnomalyDetector(unittest.TestCase):
 
     def test_normal_series_has_low_anomaly_rate(self):
         """A Gaussian series should have an anomaly rate close to contamination %."""
-        idx = pd.date_range("2020-01-01", periods=1000, freq="H", tz="UTC")
+        idx = pd.date_range("2020-01-01", periods=1000, freq="h", tz="UTC")
         normal_df = pd.DataFrame(
             {"DE_load_actual_entsoe_transparency": np.random.normal(50000, 2000, 1000)},
             index=idx,
