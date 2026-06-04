@@ -1,0 +1,24 @@
+[tool.pytest.ini_options]
+testpaths = ["ml/tests", "backend/tests"]
+asyncio_mode = "auto"
+log_cli = true
+log_cli_level = "WARNING"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::FutureWarning",
+    "ignore::UserWarning",
+]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["ml", "backend"]
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/migrations/*",
+    "alembic/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true
