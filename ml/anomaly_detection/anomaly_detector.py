@@ -30,6 +30,7 @@ class AnomalyDetector:
         self._zscore_threshold: float = float(ad_cfg.zscore_threshold)
         self._iqr_mult: float = float(ad_cfg.iqr_multiplier)
         self._target_col: str = self._cfg.data.target_column
+        self._exog_cols: List[str] = list(self._cfg.data.get("exog_columns", []))
         iso = ad_cfg.isolation_forest
         self._iso_contamination = float(iso.get("contamination", 0.05))
         self._iso_n_estimators = int(iso.get("n_estimators", 100))
@@ -42,16 +43,56 @@ class AnomalyDetector:
         self._svm_kernel = str(svm.get("kernel", "rbf"))
         self._svm_gamma = str(svm.get("gamma", "scale"))
 
+    def _get_multivariate_features(self, df: pd.DataFrame, series: pd.Series) -> np.ndarray:
+        """Construct scaled multivariate features for Isolation Forest, LOF, and One-Class SVM."""
+        features = []
+        
+        # 1. Target column (series values)
+        features.append(series.values)
+        
+        # 2. Time-based features
+        idx = series.index
+        hour_sin = np.sin(2 * np.pi * idx.hour / 24)
+        hour_cos = np.cos(2 * np.pi * idx.hour / 24)
+        is_weekend = (idx.dayofweek >= 5).astype(float)
+        
+        features.append(hour_sin)
+        features.append(hour_cos)
+        features.append(is_weekend)
+        
+        # 3. Exogenous columns (if present in df and numeric)
+        for col in self._exog_cols:
+            if col in df.columns:
+                # Align with series index in case of NaNs
+                exog_series = df.loc[series.index, col].fillna(0.0)
+                features.append(exog_series.values)
+                
+        # Stack features column-wise
+        X_multivariate = np.column_stack(features)
+        
+        # Standard scale everything for distance-based models (like LOF, SVM) and stability
+        scaler = StandardScaler()
+        return scaler.fit_transform(X_multivariate)
+
     def detect(self, df: pd.DataFrame) -> pd.DataFrame:
         with PipelineLogger(logger, "AnomalyDetector.detect"):
             result = df.copy()
             series = df[self._target_col].dropna()
             X_2d = series.values.reshape(-1, 1)
+            
+            # Construct scaled multivariate features for Isolation Forest, LOF, and SVM
+            X_multi = self._get_multivariate_features(df, series)
+            
             flag_cols: List[str] = []
             for method in self._methods:
                 col_name = f"anomaly_{method}"
                 try:
-                    flags = self._run_method(method, series, X_2d)
+                    # Pass multi-dimensional features to multivariate algorithms
+                    if method in ["isolation_forest", "lof", "one_class_svm"]:
+                        flags = self._run_method(method, series, X_multi)
+                    else:
+                        flags = self._run_method(method, series, X_2d)
+                        
                     flag_series = pd.Series(0, index=df.index, name=col_name)
                     flag_series[series.index] = flags
                     result[col_name] = flag_series
