@@ -89,6 +89,16 @@ class TestAnomalyDetector(unittest.TestCase):
         rate = result["is_anomaly"].mean()
         self.assertLess(rate, 0.3, "Too many anomalies flagged in normal data")
 
+    def test_multivariate_features_scaling_and_alignment(self):
+        series = self.df["DE_load_actual_entsoe_transparency"]
+        self.df["DE_solar_generation_actual"] = np.random.normal(5000, 1000, len(self.df))
+        X_multi = self.detector._get_multivariate_features(self.df, series)
+        # Features should include target (1) + cyclical hour (2) + weekend (1) + solar (1) = 5 features
+        self.assertEqual(X_multi.shape[1], 5)
+        # Features should be standardized
+        np.testing.assert_array_almost_equal(X_multi.mean(axis=0), np.zeros(5), decimal=4)
+        np.testing.assert_array_almost_equal(X_multi.std(axis=0), np.ones(5), decimal=4)
+
 
 if __name__ == "__main__":
     unittest.main()
