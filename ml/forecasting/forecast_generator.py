@@ -123,15 +123,29 @@ class ForecastGenerator:
             freq=freq,
         )
 
+        # Compute hourly/weekday profiles for exogenous columns to make projections sharper
+        exog_profiles = {}
+        for col in history_df.columns:
+            if col != self._target_col:
+                exog_profiles[col] = (
+                    history_df.groupby([history_df.index.dayofweek, history_df.index.hour])[col]
+                    .mean()
+                    .to_dict()
+                )
+
         for i, ts in enumerate(timestamps):
             # Add a placeholder row for the next timestamp
             new_row = pd.DataFrame(
                 {self._target_col: [np.nan]}, index=[ts]
             )
-            # Include exog columns from last known row
+            # Project exog columns using historical profile (aligned by weekday and hour)
             for col in sim_df.columns:
                 if col != self._target_col:
-                    new_row[col] = sim_df[col].iloc[-1]
+                    profile = exog_profiles.get(col, {})
+                    val = profile.get((ts.dayofweek, ts.hour))
+                    if val is None:
+                        val = sim_df[col].iloc[-1]
+                    new_row[col] = val
 
             sim_df = pd.concat([sim_df, new_row])
 
@@ -162,13 +176,27 @@ class ForecastGenerator:
             freq=freq,
         )
 
-        # For SARIMAX we need future exog values — use last known values
+        # Compute hourly/weekday profiles for exogenous columns to make projections sharper
+        exog_profiles = {}
+        for col in history_df.columns:
+            if col != self._target_col:
+                exog_profiles[col] = (
+                    history_df.groupby([history_df.index.dayofweek, history_df.index.hour])[col]
+                    .mean()
+                    .to_dict()
+                )
+
+        # For SARIMAX we need future exog values — use cyclic profiles
         exog_cols = [c for c in self._cfg.data.exog_columns if c in history_df.columns]
         if exog_cols and self._model.name == "SARIMAX":
-            future_exog = pd.DataFrame(
-                {col: [history_df[col].iloc[-1]] * horizon for col in exog_cols},
-                index=timestamps,
-            )
+            future_exog_data = {}
+            for col in exog_cols:
+                profile = exog_profiles.get(col, {})
+                future_exog_data[col] = [
+                    profile.get((ts.dayofweek, ts.hour), history_df[col].iloc[-1])
+                    for ts in timestamps
+                ]
+            future_exog = pd.DataFrame(future_exog_data, index=timestamps)
             preds = self._model.predict(future_exog)
         else:
             # Create empty DataFrame with correct length for step count
