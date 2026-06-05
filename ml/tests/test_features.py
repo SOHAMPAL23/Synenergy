@@ -14,7 +14,7 @@ from ml.feature_engineering.feature_pipeline import FeatureEngineer
 
 
 def _make_clean_df(n: int = 500) -> pd.DataFrame:
-    idx = pd.date_range("2020-01-01", periods=n, freq="H", tz="UTC")
+    idx = pd.date_range("2020-01-01", periods=n, freq="h", tz="UTC")
     target = np.random.uniform(30000, 70000, n)
     solar = np.random.uniform(0, 20000, n)
     wind = np.random.uniform(5000, 40000, n)
@@ -89,6 +89,16 @@ class TestFeatureEngineer(unittest.TestCase):
         result = self.fe.transform(self.df)
         # 168-hour lag means at least 168 rows are dropped
         self.assertLess(len(result), len(self.df))
+
+    def test_exogenous_features_present(self):
+        result = self.fe.transform(self.df)
+        # Check that lag and rolling features are created for exogenous columns
+        for col in ["DE_solar_generation_actual", "DE_wind_generation_actual"]:
+            for lag in [1, 24, 168]:
+                self.assertIn(f"{col}_t_{lag}", result.columns)
+            for window in [7, 30]:
+                self.assertIn(f"{col}_rolling_mean_{window}", result.columns)
+                self.assertIn(f"{col}_rolling_std_{window}", result.columns)
 
 
 if __name__ == "__main__":
