@@ -15,7 +15,7 @@ from ml.ingestion.schema_validator import SchemaValidator, SchemaValidationError
 
 
 def _make_df(n=200, null_target=False) -> pd.DataFrame:
-    idx = pd.date_range("2020-01-01", periods=n, freq="H", tz="UTC")
+    idx = pd.date_range("2020-01-01", periods=n, freq="h", tz="UTC")
     target = np.random.uniform(30000, 70000, n)
     if null_target:
         target[:] = np.nan
@@ -66,7 +66,7 @@ class TestSchemaValidator(unittest.TestCase):
 class TestDataCleaner(unittest.TestCase):
 
     def _make_dirty_df(self) -> pd.DataFrame:
-        idx = pd.date_range("2020-01-01", periods=300, freq="H", tz="UTC")
+        idx = pd.date_range("2020-01-01", periods=300, freq="h", tz="UTC")
         data = np.random.uniform(30000, 70000, 300)
         # Introduce missing values
         data[10:15] = np.nan
