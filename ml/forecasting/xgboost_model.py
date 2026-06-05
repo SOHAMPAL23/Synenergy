@@ -76,11 +76,28 @@ class XGBoostModel(BaseModel):
             logger.info("[%s] Best parameters found: %s", self.name, search.best_params_)
             self._model = search.best_estimator_
 
-        self._model.fit(
-            X_train, y_train,
-            eval_set=[(X_train, y_train)],
-            verbose=False,
-        )
+        # Split validation set for early stopping (last 10% of training data, min 5 rows, max 100 rows)
+        if len(X_train) >= 20:
+            val_size = min(100, max(5, int(len(X_train) * 0.1)))
+            X_tr, X_val = X_train.iloc[:-val_size], X_train.iloc[-val_size:]
+            y_tr, y_val = y_train.iloc[:-val_size], y_train.iloc[-val_size:]
+            
+            # Setup early stopping
+            self._model.set_params(early_stopping_rounds=15)
+            self._model.fit(
+                X_tr, y_tr,
+                eval_set=[(X_val, y_val)],
+                verbose=False,
+            )
+        else:
+            # Fallback for very small datasets (e.g. unit tests)
+            self._model.set_params(early_stopping_rounds=None)
+            self._model.fit(
+                X_train, y_train,
+                eval_set=[(X_train, y_train)],
+                verbose=False,
+            )
+
         self._is_fitted = True
         try:
             best_iter = self._model.best_iteration
