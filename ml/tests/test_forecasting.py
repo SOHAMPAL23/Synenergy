@@ -19,7 +19,7 @@ from ml.utils.helpers import compute_metrics
 
 def _make_feature_df(n: int = 600) -> tuple:
     """Return (X_train, y_train, X_test, y_test) with engineered features."""
-    idx = pd.date_range("2019-01-01", periods=n, freq="H", tz="UTC")
+    idx = pd.date_range("2019-01-01", periods=n, freq="h", tz="UTC")
     target = (
         50000
         + 10000 * np.sin(2 * np.pi * np.arange(n) / 24)   # daily cycle
