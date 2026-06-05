@@ -60,6 +60,16 @@ class FeatureEngineer:
         self._include_holidays: bool = bool(fe_cfg.include_holidays)
         self._holiday_country: str = str(fe_cfg.holiday_country)
         self._target_col: str = self._cfg.data.target_column
+        self._exog_cols: List[str] = list(self._cfg.data.get("exog_columns", []))
+        
+        # Cache country holidays to speed up recursive forecasting
+        self._country_holidays = None
+        if self._include_holidays and _HOLIDAYS_AVAILABLE:
+            try:
+                self._country_holidays = holidays_lib.country_holidays(self._holiday_country)
+                logger.info("Holiday flag initialized for country '%s'.", self._holiday_country)
+            except Exception as exc:
+                logger.warning("Holiday initialization failed: %s. Using zeros.", exc)
 
     # ------------------------------------------------------------------
     # Public API
@@ -125,15 +135,13 @@ class FeatureEngineer:
         return df
 
     def _compute_holiday_flag(self, idx: pd.DatetimeIndex) -> pd.Series:
-        if not self._include_holidays or not _HOLIDAYS_AVAILABLE:
+        if self._country_holidays is None:
             return pd.Series(0, index=idx)
         try:
-            country_holidays = holidays_lib.country_holidays(self._holiday_country)
             flag = pd.Series(
-                [1 if d.date() in country_holidays else 0 for d in idx],
+                [1 if d.date() in self._country_holidays else 0 for d in idx],
                 index=idx,
             )
-            logger.info("Holiday flag computed for country '%s'.", self._holiday_country)
             return flag
         except Exception as exc:
             logger.warning("Holiday computation failed: %s. Using zeros.", exc)
@@ -149,7 +157,16 @@ class FeatureEngineer:
             col_name = f"load_t_{lag}"
             df[col_name] = target.shift(lag)
             logger.debug("Lag feature created: %s", col_name)
-        logger.info("Lag features added: %s", [f"load_t_{l}" for l in self._lag_hours])
+
+        # Add lag features for exogenous columns to make models sharper
+        for exog_col in self._exog_cols:
+            if exog_col in df.columns:
+                for lag in self._lag_hours:
+                    col_name = f"{exog_col}_t_{lag}"
+                    df[col_name] = df[exog_col].shift(lag)
+                    logger.debug("Exog lag feature created: %s", col_name)
+
+        logger.info("Lag features added: target and exogenous columns")
         return df
 
     # ------------------------------------------------------------------
@@ -165,6 +182,18 @@ class FeatureEngineer:
             df[f"rolling_std_{window}"] = (
                 target.shift(1).rolling(window=window, min_periods=1).std()
             )
+
+        # Add rolling features for exogenous columns to make models sharper
+        for exog_col in self._exog_cols:
+            if exog_col in df.columns:
+                for window in self._rolling_windows:
+                    df[f"{exog_col}_rolling_mean_{window}"] = (
+                        df[exog_col].shift(1).rolling(window=window, min_periods=1).mean()
+                    )
+                    df[f"{exog_col}_rolling_std_{window}"] = (
+                        df[exog_col].shift(1).rolling(window=window, min_periods=1).std()
+                    )
+
         logger.info(
             "Rolling features added: windows=%s", self._rolling_windows
         )
