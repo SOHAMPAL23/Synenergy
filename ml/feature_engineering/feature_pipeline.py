@@ -55,8 +55,19 @@ class FeatureEngineer:
     def __init__(self, cfg=None) -> None:
         self._cfg = cfg or config
         fe_cfg = self._cfg.feature_engineering
-        self._lag_hours: List[int] = list(fe_cfg.lag_hours)
-        self._rolling_windows: List[int] = list(fe_cfg.rolling_windows)
+        
+        # Enforce highly predictive lags and windows, merging with configured ones
+        config_lags = list(fe_cfg.lag_hours)
+        config_windows = list(fe_cfg.rolling_windows)
+        
+        # We need lag+1 of these to compute diffs. Lags: 1, 2, 3, 24, 25, 48, 49, 168, 169
+        predictive_lags = {1, 2, 3, 24, 25, 48, 49, 168, 169}
+        self._lag_hours: List[int] = sorted(list(predictive_lags.union(config_lags)))
+        
+        # Rolling windows for short and long term baselines
+        predictive_windows = {7, 24, 30, 168}
+        self._rolling_windows: List[int] = sorted(list(predictive_windows.union(config_windows)))
+        
         self._include_holidays: bool = bool(fe_cfg.include_holidays)
         self._holiday_country: str = str(fe_cfg.holiday_country)
         self._target_col: str = self._cfg.data.target_column
@@ -131,6 +142,9 @@ class FeatureEngineer:
         # Holiday flag
         df["is_holiday"] = self._compute_holiday_flag(idx)
 
+        # Time interaction features
+        df["hour_is_weekend"] = df["hour"] * df["is_weekend"]
+
         logger.info("Time features added: hour, day, month, week, quarter, season, is_weekend, is_holiday + cyclicals")
         return df
 
@@ -158,6 +172,14 @@ class FeatureEngineer:
             df[col_name] = target.shift(lag)
             logger.debug("Lag feature created: %s", col_name)
 
+        # Diff features (hourly daily, and weekly acceleration/deceleration)
+        if "load_t_1" in df.columns and "load_t_2" in df.columns:
+            df["load_diff_1"] = df["load_t_1"] - df["load_t_2"]
+        if "load_t_24" in df.columns and "load_t_25" in df.columns:
+            df["load_diff_24"] = df["load_t_24"] - df["load_t_25"]
+        if "load_t_168" in df.columns and "load_t_169" in df.columns:
+            df["load_diff_168"] = df["load_t_168"] - df["load_t_169"]
+
         # Add lag features for exogenous columns to make models sharper
         for exog_col in self._exog_cols:
             if exog_col in df.columns:
@@ -166,7 +188,7 @@ class FeatureEngineer:
                     df[col_name] = df[exog_col].shift(lag)
                     logger.debug("Exog lag feature created: %s", col_name)
 
-        logger.info("Lag features added: target and exogenous columns")
+        logger.info("Lag features and difference momentum features added.")
         return df
 
     # ------------------------------------------------------------------
