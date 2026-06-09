@@ -9,6 +9,26 @@ version: "3.9"
 
 services:
 
+  # ── PostgreSQL Database ──────────────────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    container_name: enervision-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=${DB_NAME:-enervision}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - enervision-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-enervision}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
   # ── FastAPI Backend ──────────────────────────────────────────────────────────
   api:
     build:
@@ -17,6 +37,9 @@ services:
       target: production
     container_name: enervision-api
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=${DATABASE_URL}
@@ -113,6 +136,8 @@ networks:
 
 # ── Volumes ────────────────────────────────────────────────────────────────────
 volumes:
+  postgres_data:
+    name: enervision-postgres-data
   uploads_data:
     name: enervision-uploads
   ml_outputs:
