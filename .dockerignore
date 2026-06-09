@@ -1,0 +1,17 @@
+.git
+.github
+node_modules
+frontend/node_modules
+frontend/dist
+uploads
+ml/outputs
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+venv
+ENV
+env
