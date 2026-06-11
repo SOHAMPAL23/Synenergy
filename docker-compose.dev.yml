@@ -34,6 +34,9 @@ services:
       - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
       - SECRET_KEY=${SECRET_KEY:-dev-secret-key-not-for-production}
       - ALLOWED_ORIGINS=["http://localhost:3000","http://localhost:5173","http://localhost:8080"]
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
 
   frontend:
     build:
