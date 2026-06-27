@@ -14,6 +14,7 @@ services:
   api:
     build:
       target: builder   # Use builder stage (has gcc, etc.)
+    image: synenergy-api:dev
     container_name: enervision-api-dev
     command: >
       uvicorn backend.main:app
@@ -43,6 +44,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: builder   # Node.js stage only
+    image: synenergy-frontend:dev
     container_name: enervision-frontend-dev
     command: npm run dev -- --host 0.0.0.0 --port 5173
     ports:
