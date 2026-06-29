@@ -42,6 +42,8 @@ class AuthService:
 
     async def register(self, req: RegisterRequest):
         from backend.models.orm import User
+        if req.role == "admin":
+            raise ValueError("Direct registration as an administrator is not permitted.")
         existing = await self._repo.get_by_email(req.email)
         if existing:
             raise ValueError("Email already registered.")
