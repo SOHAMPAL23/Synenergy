@@ -26,12 +26,15 @@ python-dotenv>=1.0.0
 # ── ML (shared with ml/ module) ───────────────────────────────────────────────
 numpy>=1.24.0
 pandas>=2.0.0
+scipy>=1.10.0
 scikit-learn>=1.3.0
 xgboost>=2.0.0
 statsmodels>=0.14.0
 shap>=0.44.0
 joblib>=1.3.0
 PyYAML>=6.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
 
 # ── Testing ───────────────────────────────────────────────────────────────────
 pytest>=7.4.0

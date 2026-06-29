@@ -73,9 +73,29 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 # ─── Startup / Teardown helpers ───────────────────────────────────────────────
 
 async def create_all_tables() -> None:
-    """Create all tables defined via ORM models (used in dev/test)."""
+    """Create all tables defined via ORM models (used in dev/test) and seed default admin user."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Seed system admin user if not exists
+    from backend.repositories import UserRepository
+    from backend.models.orm import User
+    from backend.core.security import hash_password
+
+    async with AsyncSessionLocal() as db:
+        repo = UserRepository(db)
+        existing_admin = await repo.get_by_email(settings.FIRST_SUPERUSER_EMAIL)
+        if not existing_admin:
+            admin_user = User(
+                email=settings.FIRST_SUPERUSER_EMAIL,
+                hashed_password=hash_password(settings.FIRST_SUPERUSER_PASSWORD),
+                full_name="System Administrator",
+                role="admin",
+                is_active=True,
+                is_verified=True,
+            )
+            await repo.create(admin_user)
+            await db.commit()
 
 
 async def drop_all_tables() -> None:
