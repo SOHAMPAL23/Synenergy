@@ -1,7 +1,7 @@
-"""
-EnerVision AI - Backend Test Fixtures (conftest.py)
-Provides async test client, database fixtures, and JWT token helpers.
-"""
+# Force testing configuration before loading app or database modules
+from backend.core.config import settings
+settings.ENVIRONMENT = "testing"
+settings.DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 import asyncio
 import uuid
@@ -10,27 +10,11 @@ from typing import AsyncGenerator, Generator
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.database.session import Base, get_db, engine as test_engine, AsyncSessionLocal as TestSessionLocal
 from backend.main import app
-from backend.database.session import Base, get_db
 from backend.core.security import create_access_token, hash_password
-
-# ── Test DB (SQLite in-memory for isolation) ──────────────────────────────────
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
-
-test_engine = create_async_engine(
-    TEST_DATABASE_URL,
-    echo=False,
-    connect_args={"check_same_thread": False},
-)
-
-TestSessionLocal = sessionmaker(
-    test_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
 
 
 @pytest_asyncio.fixture(scope="session")
