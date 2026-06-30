@@ -90,6 +90,12 @@ class TestAuthEndpoints:
         resp = await async_client.post("/api/v1/auth/register", json=data)
         assert resp.status_code == 422
 
+    async def test_register_admin_role_fails(self, async_client, test_user_data):
+        data = {**test_user_data, "role": "admin", "email": "admin_test@test.com"}
+        resp = await async_client.post("/api/v1/auth/register", json=data)
+        assert resp.status_code == 400
+        assert "administrator" in resp.json()["detail"]
+
     async def test_register_weak_password_fails(self, async_client):
         resp = await async_client.post("/api/v1/auth/register", json={
             "email": "weak@test.com",
@@ -114,6 +120,18 @@ class TestAuthEndpoints:
         assert "refresh_token" in body
         assert body["token_type"] == "bearer"
         assert body["expires_in"] > 0
+
+    async def test_login_seeded_admin_success(self, async_client):
+        from backend.core.config import settings
+        resp = await async_client.post("/api/v1/auth/login", json={
+            "email": settings.FIRST_SUPERUSER_EMAIL,
+            "password": settings.FIRST_SUPERUSER_PASSWORD,
+        })
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "access_token" in body
+        assert "refresh_token" in body
+        assert body["token_type"] == "bearer"
 
     async def test_login_wrong_password_fails(self, async_client, test_user_data):
         uid = str(uuid.uuid4())[:8]
