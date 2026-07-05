@@ -8,11 +8,9 @@ import os
 import sys
 import uuid
 import asyncio
-from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
-import pytest
 
 # Add project root to sys.path
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
