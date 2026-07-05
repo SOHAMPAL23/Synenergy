@@ -34,11 +34,67 @@ const AnomalyTooltip = ({ active, payload }: any) => {
 
 const Anomaly: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'anomalies'>('all')
+  const [severityFilter, setSeverityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all')
+  const [showAcknowledged, setShowAcknowledged] = useState(false)
+  const [acknowledgedKeys, setAcknowledgedKeys] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('acknowledged_anomalies')
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
+
+  const toggleAcknowledge = (timestamp: string) => {
+    setAcknowledgedKeys(prev => {
+      const next = prev.includes(timestamp) ? prev.filter(t => t !== timestamp) : [...prev, timestamp]
+      localStorage.setItem('acknowledged_anomalies', JSON.stringify(next))
+      return next
+    })
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['anomalies'],
     queryFn: mlService.getAnomalies,
   })
+
+  const allAnomalies = useMemo(() => {
+    return (data?.points ?? []).filter(p => p.is_anomaly)
+  }, [data])
+
+  const filteredAnomalies = useMemo(() => {
+    return allAnomalies.filter(p => {
+      const matchSeverity = severityFilter === 'all' || p.severity === severityFilter
+      const isAck = acknowledgedKeys.includes(p.timestamp)
+      const matchAck = showAcknowledged || !isAck
+      return matchSeverity && matchAck
+    })
+  }, [allAnomalies, severityFilter, acknowledgedKeys, showAcknowledged])
+
+  const handleExportReport = () => {
+    if (filteredAnomalies.length === 0) return
+    const timestampStr = new Date().toISOString().split('T')[0]
+    const header = `ENERVISION AI - ANOMALY INCIDENT REPORT (${timestampStr})\n` +
+                   `============================================================\n\n` +
+                   `Active alerts in triage: ${filteredAnomalies.length}\n` +
+                   `Filters applied: Severity=${severityFilter.toUpperCase()}, Show Resolved=${showAcknowledged ? 'YES' : 'NO'}\n\n` +
+                   `Incidents List:\n` +
+                   `------------------------------------------------------------\n`
+    const rows = filteredAnomalies.map((p, idx) => {
+      const status = acknowledgedKeys.includes(p.timestamp) ? 'RESOLVED' : 'OPEN'
+      return `${idx + 1}. Time: ${formatDateTime(p.timestamp)} | Value: ${formatMW(p.value)} | Severity: ${p.severity.toUpperCase()} | Score: ${(p.anomaly_score * 100).toFixed(0)}% | Status: ${status}`
+    }).join('\n')
+    
+    const blob = new Blob([header + rows], { type: 'text/plain' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `enervision_incident_report_${timestampStr}.txt`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
 
   const timelineData = useMemo(() => {
     const pts = downsample(data?.points ?? [], 500)
@@ -220,6 +276,123 @@ const Anomaly: React.FC = () => {
             </div>
           </div>
         </div>
+      </ChartCard>
+
+      {/* Triage Alert Queue Section */}
+      <ChartCard 
+        title="Anomaly Alert Queue" 
+        subtitle={`${filteredAnomalies.length} active alerts matching filters`}
+        actions={
+          <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+            {/* Severity filter */}
+            <div className="flex gap-1 bg-bg-primary border border-bg-border rounded-lg p-0.5">
+              {(['all', 'high', 'medium', 'low'] as const).map(sev => (
+                <button 
+                  key={sev} 
+                  onClick={() => setSeverityFilter(sev)}
+                  className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold transition-all cursor-pointer ${
+                    severityFilter === sev 
+                      ? 'bg-electric-600 text-white' 
+                      : 'text-text-muted hover:text-text-primary'
+                  }`}
+                >
+                  {sev}
+                </button>
+              ))}
+            </div>
+
+            {/* Show Acknowledged Switch */}
+            <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer hover:text-text-primary select-none whitespace-nowrap">
+              <input 
+                type="checkbox" 
+                checked={showAcknowledged} 
+                onChange={(e) => setShowAcknowledged(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-bg-border bg-bg-primary text-electric-600 focus:ring-electric-500 cursor-pointer"
+              />
+              Show Resolved
+            </label>
+
+            {/* Export Button */}
+            <button 
+              onClick={handleExportReport} 
+              className="btn-secondary text-[11px] px-2.5 py-1 flex items-center gap-1 cursor-pointer whitespace-nowrap"
+              disabled={filteredAnomalies.length === 0}
+            >
+              Export Report
+            </button>
+          </div>
+        }
+      >
+        <div className="overflow-x-auto max-h-96">
+          <table className="w-full text-sm text-left border-collapse">
+            <thead>
+              <tr className="border-b border-bg-border text-xs">
+                <th className="label py-2.5 px-3">Triage</th>
+                <th className="label py-2.5 px-3">Time Detected</th>
+                <th className="label py-2.5 px-3">Measured Load</th>
+                <th className="label py-2.5 px-3">Confidence Score</th>
+                <th className="label py-2.5 px-3">Severity</th>
+                <th className="label py-2.5 px-3">Resolution</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-bg-border/40">
+              {filteredAnomalies.slice(0, 100).map((p) => {
+                const isAck = acknowledgedKeys.includes(p.timestamp)
+                return (
+                  <tr key={p.timestamp} className={`hover:bg-bg-hover/20 transition-colors ${isAck ? 'opacity-50' : ''}`}>
+                    <td className="py-2.5 px-3">
+                      <input 
+                        type="checkbox" 
+                        checked={isAck} 
+                        onChange={() => toggleAcknowledge(p.timestamp)}
+                        className="w-4 h-4 rounded border-bg-border bg-bg-primary text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                        title={isAck ? "Re-open incident" : "Acknowledge and resolve incident"}
+                      />
+                    </td>
+                    <td className="py-2.5 px-3 font-medium text-text-primary text-xs">
+                      {formatDateTime(p.timestamp)}
+                    </td>
+                    <td className="py-2.5 px-3 text-text-secondary text-xs font-mono">
+                      {formatMW(p.value)}
+                    </td>
+                    <td className="py-2.5 px-3 text-text-muted text-xs">
+                      {(p.anomaly_score * 100).toFixed(0)}% ensemble
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span 
+                        className="px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                        style={{ 
+                          color: getSeverityColor(p.severity),
+                          background: `${getSeverityColor(p.severity)}15`,
+                          border: `1px solid ${getSeverityColor(p.severity)}30` 
+                        }}
+                      >
+                        {p.severity}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-xs">
+                      {isAck ? (
+                        <span className="text-emerald-500 font-semibold flex items-center gap-0.5">✓ Resolved</span>
+                      ) : (
+                        <span className="text-warning-500 font-semibold flex items-center gap-0.5">⚠ Open Alert</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+              {filteredAnomalies.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-text-muted">
+                    No active anomalies found matching filters.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {filteredAnomalies.length > 100 && (
+          <p className="text-[10px] text-text-muted mt-2">Showing first 100 anomalies in queue.</p>
+        )}
       </ChartCard>
     </div>
   )

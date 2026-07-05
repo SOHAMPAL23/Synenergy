@@ -187,6 +187,11 @@ const UploadPage: React.FC = () => {
   const [uploadHistory, setUploadHistory] = useState<UploadRecord[]>([])
   const [error, setError] = useState<string | null>(null)
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewHeaders, setPreviewHeaders] = useState<string[]>([])
+  const [previewRows, setPreviewRows] = useState<string[][]>([])
+  const [hasRequiredHeader, setHasRequiredHeader] = useState<boolean>(false)
+
   const uploadMutation = useMutation({
     mutationFn: (file: File) => mlService.uploadCSV(file),
     onSuccess: (data) => {
@@ -217,8 +222,40 @@ const UploadPage: React.FC = () => {
       return
     }
     setError(null)
-    uploadMutation.mutate(file)
-  }, [uploadMutation])
+    setSelectedFile(file)
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = e.target?.result as string
+      if (!text) return
+      const lines = text.split('\n').map(line => line.trim()).filter(Boolean)
+      const parsedHeaders = lines[0] ? lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, '')) : []
+      const parsedRows = lines.slice(1, 6).map(line => line.split(',').map(val => val.trim().replace(/^["']|["']$/g, '')))
+      setPreviewHeaders(parsedHeaders)
+      setPreviewRows(parsedRows)
+      
+      const containsTarget = parsedHeaders.some(h => 
+        h === 'DE_load_actual_entsoe_transparency' || 
+        h.toLowerCase().includes('load') || 
+        h.toLowerCase().includes('actual')
+      )
+      setHasRequiredHeader(containsTarget)
+    }
+    reader.readAsText(file)
+  }, [])
+
+  const handleConfirmUpload = () => {
+    if (!selectedFile) return
+    uploadMutation.mutate(selectedFile)
+    setSelectedFile(null)
+  }
+
+  const handleCancelPreview = () => {
+    setSelectedFile(null)
+    setPreviewHeaders([])
+    setPreviewRows([])
+    setHasRequiredHeader(false)
+  }
 
   return (
     <div className="page-container">
@@ -252,8 +289,107 @@ const UploadPage: React.FC = () => {
         ))}
       </div>
 
-      {/* Drop Zone */}
-      <DropZone onFile={handleFile} uploading={uploadMutation.isPending} />
+      {/* Drop Zone / CSV Preview */}
+      {!selectedFile ? (
+        <DropZone onFile={handleFile} uploading={uploadMutation.isPending} />
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass-card p-6 border border-electric-500/30 shadow-glow-blue"
+        >
+          <div className="flex items-center justify-between mb-4 border-b border-bg-border/60 pb-3 flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-electric-gradient flex items-center justify-center text-white shadow-glow-blue">
+                <FileText size={20} />
+              </div>
+              <div>
+                <h4 className="text-md font-bold text-text-primary">{selectedFile.name}</h4>
+                <p className="text-xs text-text-muted">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB · Local Parse Preview</p>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <button 
+                onClick={handleCancelPreview} 
+                className="btn-secondary text-xs px-3 py-1.5 cursor-pointer"
+                disabled={uploadMutation.isPending}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleConfirmUpload} 
+                className={`btn-primary text-xs px-4 py-1.5 flex items-center gap-1.5 cursor-pointer ${
+                  !hasRequiredHeader ? 'bg-warning-600 hover:bg-warning-500 border-warning-600' : ''
+                }`}
+                disabled={uploadMutation.isPending}
+              >
+                {uploadMutation.isPending ? <Spinner size={12} /> : null}
+                Confirm & Process Ingestion
+              </button>
+            </div>
+          </div>
+
+          {/* Validation Header Banner */}
+          <div className={`flex items-start gap-2.5 p-3 rounded-xl mb-4 border text-xs ${
+            hasRequiredHeader
+              ? 'bg-success-500/5 border-success-500/25 text-success-400'
+              : 'bg-warning-500/5 border-warning-500/25 text-warning-400'
+          }`}>
+            {hasRequiredHeader ? (
+              <>
+                <CheckCircle size={16} className="mt-0.5 flex-shrink-0 text-success-500" />
+                <div>
+                  <strong className="font-semibold block text-text-primary mb-0.5">Schema Validation: Successful</strong>
+                  Required energy target column detected in file headers. Model pipeline is ready to consume this file.
+                </div>
+              </>
+            ) : (
+              <>
+                <AlertTriangle size={16} className="mt-0.5 flex-shrink-0 text-warning-500" />
+                <div>
+                  <strong className="font-semibold block text-text-primary mb-0.5">Schema Notice: Target Column Not Named Explicitly</strong>
+                  Expected `<code className="font-mono text-xs bg-bg-primary px-1 border border-bg-border rounded text-warning-500">DE_load_actual_entsoe_transparency</code>` in headers. The pipeline will attempt to map the first numeric column as load data.
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Table Grid Preview */}
+          <div className="border border-bg-border rounded-xl overflow-hidden bg-bg-primary/30 mb-2">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="bg-bg-secondary border-b border-bg-border">
+                    {previewHeaders.map((h, i) => (
+                      <th key={i} className="py-2.5 px-3 font-semibold text-text-secondary border-r border-bg-border/60 last:border-r-0">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.map((row, ri) => (
+                    <tr key={ri} className="border-b border-bg-border/40 last:border-0 hover:bg-bg-hover/10 transition-colors">
+                      {row.map((cell, ci) => (
+                        <td key={ci} className="py-2.5 px-3 text-text-muted border-r border-bg-border/30 last:border-r-0 font-mono">
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {previewRows.length === 0 && (
+              <div className="p-8 text-center text-text-muted">
+                No preview lines parsed.
+              </div>
+            )}
+          </div>
+          <span className="text-[10px] text-text-muted">Showing first 5 rows of selected file.</span>
+        </motion.div>
+      )}
 
       {/* Error */}
       {error && (

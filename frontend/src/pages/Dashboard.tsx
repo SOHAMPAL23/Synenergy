@@ -105,6 +105,135 @@ const Dashboard: React.FC = () => {
     },
   ]
 
+  const hasData = stats && stats.total_records > 0
+  const hasModel = stats && stats.best_model && stats.best_model !== 'Not trained'
+  const isHealthy = hasData && hasModel
+
+  const renderWizard = () => {
+    if (isLoading) return null
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card p-5 border border-bg-border mb-6 overflow-hidden relative"
+      >
+        {isHealthy ? (
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <span className="relative flex h-3.5 w-3.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-success-500"></span>
+              </span>
+              <div>
+                <h4 className="text-sm font-semibold text-text-primary">System Health Status: Fully Active</h4>
+                <p className="text-xs text-text-muted">
+                  Database contains active records. Best model: <strong className="text-electric-400 font-semibold">{stats.best_model}</strong>. Predictions are online.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => navigate('/forecast')} className="btn-secondary text-xs px-3 py-1.5 cursor-pointer">View Forecasts</button>
+              <button onClick={() => navigate('/anomalies')} className="btn-secondary text-xs px-3 py-1.5 cursor-pointer">Check Outliers</button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div className="flex items-center justify-between mb-4 border-b border-bg-border/40 pb-2">
+              <div>
+                <h4 className="text-sm font-bold text-text-primary flex items-center gap-2">
+                  <RefreshCw size={14} className="text-electric-400 animate-spin" style={{ animationDuration: '3s' }} />
+                  System Setup & Onboarding Wizard
+                </h4>
+                <p className="text-xs text-text-muted">Follow these steps to initialize the machine learning pipelines and start optimizing.</p>
+              </div>
+              <span className="badge-medium text-xs font-semibold px-2 py-0.5">Setup Pending</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Step 1 */}
+              <div className={`p-3 rounded-xl border transition-all ${
+                hasData 
+                  ? 'bg-success-500/5 border-success-500/25' 
+                  : 'bg-electric-500/5 border-electric-500/25'
+              }`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                    hasData ? 'bg-success-500' : 'bg-electric-500'
+                  }`}>
+                    1
+                  </span>
+                  <span className="font-semibold text-xs text-text-primary">Ingest Energy CSV</span>
+                </div>
+                <p className="text-xs text-text-muted mb-2">Upload a time-series CSV file to build the historical model baseline.</p>
+                {hasData ? (
+                  <span className="text-xs font-semibold text-success-500 flex items-center gap-1">✓ Complete ({stats.total_records.toLocaleString()} rows)</span>
+                ) : (
+                  <button onClick={() => navigate('/upload')} className="text-xs font-bold text-electric-400 hover:text-electric-300 flex items-center gap-1 cursor-pointer">
+                    Go to Upload &rarr;
+                  </button>
+                )}
+              </div>
+
+              {/* Step 2 */}
+              <div className={`p-3 rounded-xl border transition-all ${
+                hasData
+                  ? hasModel
+                    ? 'bg-success-500/5 border-success-500/25'
+                    : 'bg-warning-500/5 border-warning-500/25 animate-pulse'
+                  : 'opacity-50 border-bg-border'
+              }`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                    hasModel ? 'bg-success-500' : 'bg-bg-border text-text-muted'
+                  }`}>
+                    2
+                  </span>
+                  <span className="font-semibold text-xs text-text-primary">Run AutoML Pipeline</span>
+                </div>
+                <p className="text-xs text-text-muted mb-2">Train 6 model variations, automatically selecting the best configuration by RMSE.</p>
+                {hasModel ? (
+                  <span className="text-xs font-semibold text-success-500">✓ Best Model: {stats.best_model}</span>
+                ) : hasData ? (
+                  <button 
+                    onClick={handleTrain} 
+                    disabled={training} 
+                    className="text-xs font-bold text-warning-500 hover:text-warning-400 flex items-center gap-1 cursor-pointer"
+                  >
+                    {training ? 'Training...' : 'Trigger Training \u2192'}
+                  </button>
+                ) : (
+                  <span className="text-xs text-text-muted">Awaiting Ingestion</span>
+                )}
+              </div>
+
+              {/* Step 3 */}
+              <div className={`p-3 rounded-xl border transition-all ${
+                isHealthy 
+                  ? 'bg-success-500/5 border-success-500/25' 
+                  : 'opacity-50 border-bg-border'
+              }`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                    isHealthy ? 'bg-success-500' : 'bg-bg-border text-text-muted'
+                  }`}>
+                    3
+                  </span>
+                  <span className="font-semibold text-xs text-text-primary">Access Insights</span>
+                </div>
+                <p className="text-xs text-text-muted mb-2">Forecast consumption peaks, flag anomaly points, and generate optimal action items.</p>
+                {isHealthy ? (
+                  <span className="text-xs font-semibold text-success-500">✓ Pipelines Active</span>
+                ) : (
+                  <span className="text-xs text-text-muted">Awaiting Setup Steps</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </motion.div>
+    )
+  }
+
   return (
     <div className="page-container">
       <PageHeader
@@ -134,6 +263,8 @@ const Dashboard: React.FC = () => {
           </div>
         }
       />
+
+      {renderWizard()}
 
       {/* Metric cards */}
       <motion.div
