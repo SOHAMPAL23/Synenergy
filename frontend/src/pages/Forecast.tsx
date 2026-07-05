@@ -27,6 +27,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 const Forecast: React.FC = () => {
   const [horizon, setHorizon] = useState<Horizon>('24h')
+  const [peakShaving, setPeakShaving] = useState(0)
+  const [solarShift, setSolarShift] = useState(0)
+  const [gridOpt, setGridOpt] = useState(0)
 
   const { data, isLoading } = useQuery({
     queryKey: ['forecasts'],
@@ -49,6 +52,25 @@ const Forecast: React.FC = () => {
   const peakForecast = chartData.length
     ? Math.max(...chartData.map(p => p.Forecast))
     : 0
+
+  const simulatedChartData = chartData.map(p => {
+    const hour = new Date(p.ts).getHours()
+    const isDaylight = hour >= 8 && hour <= 18
+    const solarReduction = isDaylight ? p.Forecast * (solarShift / 100) : 0
+    const optReduction = p.Forecast * (gridOpt / 100)
+    const shavedAmount = p.Forecast > avgForecast ? (p.Forecast - avgForecast) * (peakShaving / 100) : 0
+    const simulated = Math.max(0, Math.round(p.Forecast - shavedAmount - solarReduction - optReduction))
+    return {
+      ...p,
+      'Simulated Load': simulated,
+    }
+  })
+
+  const totalOffsetMW = simulatedChartData.reduce((acc, p) => acc + (p.Forecast - p['Simulated Load']), 0)
+  const simulatedPeak = simulatedChartData.length ? Math.max(...simulatedChartData.map(p => p['Simulated Load'])) : 0
+  const peakShavedVal = Math.max(0, peakForecast - simulatedPeak)
+  const estDailySavings = totalOffsetMW * 85
+  const estCarbonAbated = totalOffsetMW * 420
 
   return (
     <div className="page-container">
@@ -98,7 +120,7 @@ const Forecast: React.FC = () => {
         actions={<Calendar size={14} className="text-slate-500" />}
       >
         <ResponsiveContainer width="100%" height={320}>
-          <AreaChart data={chartData}>
+          <AreaChart data={simulatedChartData}>
             <defs>
               <linearGradient id="fGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -124,12 +146,111 @@ const Forecast: React.FC = () => {
             <Area type="monotone" dataKey="Upper" stroke="#22d3ee" strokeWidth={1.5} fill="url(#ciGrad)" strokeDasharray="5 3" name="Upper Bound" />
             <Area type="monotone" dataKey="Forecast" stroke="#3b82f6" strokeWidth={2.5} fill="url(#fGrad)" />
             <Area type="monotone" dataKey="Lower" stroke="#22d3ee" strokeWidth={1.5} fill="none" strokeDasharray="5 3" name="Lower Bound" />
+            <Line type="monotone" dataKey="Simulated Load" stroke="#10b981" strokeWidth={2.5} strokeDasharray="4 4" dot={false} name="Simulated Load" />
             {avgForecast > 0 && (
               <ReferenceLine y={avgForecast} stroke="#f59e0b" strokeDasharray="4 2" label={{ value: 'Avg', fill: '#f59e0b', fontSize: 10 }} />
             )}
           </AreaChart>
         </ResponsiveContainer>
       </ChartCard>
+
+      {/* What-If Simulator Panel */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4 animate-slide-up">
+        {/* Sliders Card */}
+        <div className="glass-card p-5 border border-bg-border lg:col-span-2">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="p-1.5 rounded-lg bg-electric-500/10 text-electric-400">
+              <Zap size={16} />
+            </span>
+            <div>
+              <h4 className="text-sm font-bold text-text-primary">What-If Forecast Simulator</h4>
+              <p className="text-xs text-text-muted">Simulate operational offsets and clean grid integrations on the forecast horizon.</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            {/* Slider 1 */}
+            <div>
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-text-secondary font-medium">Peak Shaving Intensity</span>
+                <span className="text-electric-400 font-semibold">{peakShaving}% reduction</span>
+              </div>
+              <input 
+                type="range" 
+                min="0" 
+                max="20" 
+                value={peakShaving} 
+                onChange={e => setPeakShaving(Number(e.target.value))}
+                className="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-electric-500"
+              />
+              <p className="text-[10px] text-text-muted mt-1">Shaves loads that exceed the median forecast baseline.</p>
+            </div>
+
+            {/* Slider 2 */}
+            <div>
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-text-secondary font-medium">Solar & Wind Offset Shift</span>
+                <span className="text-emerald-400 font-semibold">{solarShift}% capacity</span>
+              </div>
+              <input 
+                type="range" 
+                min="0" 
+                max="30" 
+                value={solarShift} 
+                onChange={e => setSolarShift(Number(e.target.value))}
+                className="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              />
+              <p className="text-[10px] text-text-muted mt-1">Offsets consumption during daylight generation windows (08:00 - 18:00).</p>
+            </div>
+
+            {/* Slider 3 */}
+            <div>
+              <div className="flex justify-between text-xs mb-1.5">
+                <span className="text-text-secondary font-medium">Grid Efficiency Factors</span>
+                <span className="text-cyan-400 font-semibold">{gridOpt}% gain</span>
+              </div>
+              <input 
+                type="range" 
+                min="0" 
+                max="10" 
+                value={gridOpt} 
+                onChange={e => setGridOpt(Number(e.target.value))}
+                className="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-cyan-500"
+              />
+              <p className="text-[10px] text-text-muted mt-1">Applies standard continuous grid efficiency adjustments across all hours.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic ROI Metrics Card */}
+        <div className="glass-card p-5 border border-emerald-500/25 bg-emerald-500/5 flex flex-col justify-between">
+          <div>
+            <h4 className="text-sm font-bold text-emerald-400 mb-0.5">Estimated Simulation ROI</h4>
+            <p className="text-xs text-text-muted mb-4">Calculated offsets based on current slider configurations.</p>
+            
+            <div className="space-y-3">
+              <div className="flex justify-between items-center border-b border-bg-border/40 pb-2">
+                <span className="text-xs text-text-secondary">Peak Shaved</span>
+                <span className="text-sm font-bold text-text-primary">{formatMW(peakShavedVal)}</span>
+              </div>
+              
+              <div className="flex justify-between items-center border-b border-bg-border/40 pb-2">
+                <span className="text-xs text-text-secondary">Est. Cost Savings</span>
+                <span className="text-sm font-bold text-emerald-400">+${Math.round(estDailySavings).toLocaleString()}/day</span>
+              </div>
+
+              <div className="flex justify-between items-center pb-2">
+                <span className="text-xs text-text-secondary">CO₂ Offset</span>
+                <span className="text-sm font-bold text-cyan-400">{Math.round(estCarbonAbated).toLocaleString()} kg/day</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-[10px] text-text-muted mt-4 border-t border-bg-border/40 pt-2.5">
+            *Simulation calculations are generated locally on the selected forecast interval.
+          </div>
+        </div>
+      </div>
 
       {/* Horizon comparison */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
