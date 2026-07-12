@@ -116,7 +116,7 @@ uvicorn backend.main:app --reload --port 8000
 
 ---
 
-## 🐳 Docker
+## Docker
 
 ```bash
 # Build and run
@@ -128,7 +128,7 @@ curl http://localhost:8000/api/v1/health
 
 ---
 
-## 🔌 API Endpoints
+## API Endpoints
 
 ### Authentication
 
@@ -210,5 +210,5 @@ pytest -v
 - **CORS** — Configurable allowed origins
 - **Request Logging** — Structured logs with correlation IDs
 
---
+
 
