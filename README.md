@@ -1,4 +1,4 @@
-# EnerVision AI 🔋
+# EnerVision AI 
 
 > **End-to-end Energy Forecasting, Anomaly Detection & Optimization Platform**
 
@@ -9,7 +9,7 @@
 
 ---
 
-## 🏗 Architecture
+## Architecture
 
 ```
 Synenergy/
@@ -82,7 +82,7 @@ Synenergy/
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install dependencies
 
@@ -154,7 +154,7 @@ curl http://localhost:8000/api/v1/health
 
 ---
 
-## 🧪 Running Tests
+## Running Tests
 
 ### ML Pipeline Tests
 
@@ -200,7 +200,7 @@ pytest -v
 
 ---
 
-## 🔐 Security Features
+##  Security Features
 
 - **JWT Authentication** — Access token (30min) + Refresh token (7 days)
 - **RBAC** — admin / analyst / viewer roles
