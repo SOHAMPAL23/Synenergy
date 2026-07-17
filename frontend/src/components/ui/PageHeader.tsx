@@ -9,15 +9,19 @@ interface PageHeaderProps {
 }
 
 const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, actions, badge }) => (
-  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
     <div>
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-display font-bold text-text-primary tracking-tight">{title}</h1>
-        {badge && <span className="badge-info">{badge}</span>}
+        <h1 className="text-2xl sm:text-3xl font-display font-extrabold text-text-primary tracking-tight">{title}</h1>
+        {badge && (
+          <span className="badge-info text-[9px] font-bold py-0.5 px-2 rounded-md uppercase tracking-wider bg-electric-500/10 text-electric-400 border border-electric-500/30 shadow-sm animate-pulse-slow">
+            {badge}
+          </span>
+        )}
       </div>
-      {subtitle && <p className="text-sm text-text-secondary mt-1">{subtitle}</p>}
+      {subtitle && <p className="text-xs sm:text-sm text-text-muted mt-1.5 leading-relaxed font-medium">{subtitle}</p>}
     </div>
-    {actions && <div className="flex items-center gap-2">{actions}</div>}
+    {actions && <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">{actions}</div>}
   </div>
 )
 
@@ -33,17 +37,17 @@ interface ChartCardProps {
 export const ChartCard: React.FC<ChartCardProps> = ({
   title, subtitle, children, className, actions, loading,
 }) => (
-  <div className={cn('glass-card p-5', className)}>
-    <div className="flex items-center justify-between mb-4">
+  <div className={cn('glass-card p-6 shadow-lg border border-bg-border/60', className)}>
+    <div className="flex items-center justify-between mb-5">
       <div>
-        <h3 className="text-sm font-semibold text-text-primary">{title}</h3>
-        {subtitle && <p className="text-xs text-text-muted mt-0.5">{subtitle}</p>}
+        <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">{title}</h3>
+        {subtitle && <p className="text-[10px] text-text-muted mt-1 leading-relaxed">{subtitle}</p>}
       </div>
       {actions}
     </div>
     {loading ? (
-      <div className="space-y-2">
-        <div className="skeleton h-[200px] w-full" />
+      <div className="space-y-3">
+        <div className="skeleton h-[200px] w-full rounded-xl" />
       </div>
     ) : children}
   </div>
