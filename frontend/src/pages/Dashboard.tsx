@@ -10,16 +10,18 @@ import { dashboardService } from '../services/dashboard'
 import { mlService } from '../services/ml'
 import MetricCard from '../components/ui/MetricCard'
 import PageHeader, { ChartCard, Spinner, EmptyState } from '../components/ui/PageHeader'
-import { formatMW, formatDateTime, getPriorityColor, downsample } from '../utils/format'
+import { formatMW, formatDateTime, getPriorityColor, downsample, cn } from '../utils/format'
 import { useNavigate } from 'react-router-dom'
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="glass-card px-3 py-2 text-xs">
-      <p className="text-text-muted mb-1">{formatDateTime(label)}</p>
+    <div className="glass-card px-3.5 py-2.5 text-xs border border-bg-border/60 shadow-lg select-none">
+      <p className="text-text-muted font-medium mb-1.5">{formatDateTime(label)}</p>
       {payload.map((p: any) => (
-        <p key={p.name} style={{ color: p.color }}>{p.name}: <span className="font-semibold">{formatMW(p.value)}</span></p>
+        <p key={p.name} style={{ color: p.color }} className="font-medium">
+          {p.name}: <span className="font-bold text-text-primary ml-1">{formatMW(p.value)}</span>
+        </p>
       ))}
     </div>
   )
@@ -113,93 +115,93 @@ const Dashboard: React.FC = () => {
     if (isLoading) return null
     return (
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
+        initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
-        className="glass-card p-5 border border-bg-border mb-6 overflow-hidden relative"
+        className="glass-card p-6 mb-6 overflow-hidden relative border border-bg-border/60"
       >
         {isHealthy ? (
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
-              <span className="relative flex h-3.5 w-3.5">
+              <span className="relative flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-success-500"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-success-500 shadow-glow-green"></span>
               </span>
               <div>
-                <h4 className="text-sm font-semibold text-text-primary">System Health Status: Fully Active</h4>
-                <p className="text-xs text-text-muted">
-                  Database contains active records. Best model: <strong className="text-electric-400 font-semibold">{stats.best_model}</strong>. Predictions are online.
+                <h4 className="text-sm font-bold text-text-primary tracking-tight">System Status: Fully Operational</h4>
+                <p className="text-xs text-text-muted mt-0.5">
+                  Database contains active records. Selected ML Baseline: <strong className="text-electric-400 font-semibold">{stats.best_model}</strong>. Real-time predictions online.
                 </p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => navigate('/forecast')} className="btn-secondary text-xs px-3 py-1.5 cursor-pointer">View Forecasts</button>
-              <button onClick={() => navigate('/anomalies')} className="btn-secondary text-xs px-3 py-1.5 cursor-pointer">Check Outliers</button>
+              <button onClick={() => navigate('/forecast')} className="btn-secondary text-xs px-3.5 py-1.5 cursor-pointer">View Forecasts</button>
+              <button onClick={() => navigate('/anomalies')} className="btn-secondary text-xs px-3.5 py-1.5 cursor-pointer">Check Outliers</button>
             </div>
           </div>
         ) : (
           <div>
-            <div className="flex items-center justify-between mb-4 border-b border-bg-border/40 pb-2">
+            <div className="flex items-center justify-between mb-5 border-b border-bg-border/40 pb-3">
               <div>
-                <h4 className="text-sm font-bold text-text-primary flex items-center gap-2">
-                  <RefreshCw size={14} className="text-electric-400 animate-spin" style={{ animationDuration: '3s' }} />
-                  System Setup & Onboarding Wizard
+                <h4 className="text-sm font-bold text-text-primary flex items-center gap-2 tracking-tight">
+                  <RefreshCw size={14} className="text-electric-400 animate-spin" style={{ animationDuration: '4s' }} />
+                  System Setup & ML Ingestion Pipeline
                 </h4>
-                <p className="text-xs text-text-muted">Follow these steps to initialize the machine learning pipelines and start optimizing.</p>
+                <p className="text-xs text-text-muted mt-0.5">Follow these setup milestones to baseline your energy grids and start prediction models.</p>
               </div>
-              <span className="badge-medium text-xs font-semibold px-2 py-0.5">Setup Pending</span>
+              <span className="badge-medium text-[10px] font-bold px-2 py-0.5">Initial Setup Pending</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               {/* Step 1 */}
-              <div className={`p-3 rounded-xl border transition-all ${
+              <div className={`p-4 rounded-2xl border transition-all duration-300 ${
                 hasData 
-                  ? 'bg-success-500/5 border-success-500/25' 
-                  : 'bg-electric-500/5 border-electric-500/25'
+                  ? 'bg-success-500/5 border-success-500/20 shadow-sm' 
+                  : 'bg-electric-500/5 border-electric-500/20 hover:border-electric-500/35'
               }`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${
+                <div className="flex items-center gap-2.5 mb-2">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm ${
                     hasData ? 'bg-success-500' : 'bg-electric-500'
                   }`}>
                     1
                   </span>
-                  <span className="font-semibold text-xs text-text-primary">Ingest Energy CSV</span>
+                  <span className="font-semibold text-xs text-text-primary tracking-wide">Ingest Energy CSV</span>
                 </div>
-                <p className="text-xs text-text-muted mb-2">Upload a time-series CSV file to build the historical model baseline.</p>
+                <p className="text-xs text-text-muted leading-relaxed mb-3">Upload a historical time-series CSV file to construct the model energy consumption baselines.</p>
                 {hasData ? (
-                  <span className="text-xs font-semibold text-success-500 flex items-center gap-1">✓ Complete ({stats.total_records.toLocaleString()} rows)</span>
+                  <span className="text-[11px] font-bold text-success-400 flex items-center gap-1">✓ Complete ({stats.total_records.toLocaleString()} rows)</span>
                 ) : (
-                  <button onClick={() => navigate('/upload')} className="text-xs font-bold text-electric-400 hover:text-electric-300 flex items-center gap-1 cursor-pointer">
+                  <button onClick={() => navigate('/upload')} className="text-xs font-bold text-electric-400 hover:text-electric-300 flex items-center gap-1 cursor-pointer transition-transform hover:translate-x-0.5">
                     Go to Upload &rarr;
                   </button>
                 )}
               </div>
 
               {/* Step 2 */}
-              <div className={`p-3 rounded-xl border transition-all ${
+              <div className={`p-4 rounded-2xl border transition-all duration-300 ${
                 hasData
                   ? hasModel
-                    ? 'bg-success-500/5 border-success-500/25'
-                    : 'bg-warning-500/5 border-warning-500/25 animate-pulse'
+                    ? 'bg-success-500/5 border-success-500/20 shadow-sm'
+                    : 'bg-warning-500/5 border-warning-500/20 animate-pulse-slow'
                   : 'opacity-50 border-bg-border'
               }`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                    hasModel ? 'bg-success-500' : 'bg-bg-border text-text-muted'
+                <div className="flex items-center gap-2.5 mb-2">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${
+                    hasModel ? 'bg-success-500 shadow-sm' : 'bg-bg-border text-text-muted'
                   }`}>
                     2
                   </span>
-                  <span className="font-semibold text-xs text-text-primary">Run AutoML Pipeline</span>
+                  <span className="font-semibold text-xs text-text-primary tracking-wide">Run AutoML Training</span>
                 </div>
-                <p className="text-xs text-text-muted mb-2">Train 6 model variations, automatically selecting the best configuration by RMSE.</p>
+                <p className="text-xs text-text-muted leading-relaxed mb-3">Train 6 distinct model variations, automatically ranking and selecting the configuration with the lowest RMSE.</p>
                 {hasModel ? (
-                  <span className="text-xs font-semibold text-success-500">✓ Best Model: {stats.best_model}</span>
+                  <span className="text-[11px] font-bold text-success-400">✓ Best Model Selected: {stats.best_model}</span>
                 ) : hasData ? (
                   <button 
                     onClick={handleTrain} 
                     disabled={training} 
-                    className="text-xs font-bold text-warning-500 hover:text-warning-400 flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-bold text-warning-500 hover:text-warning-400 flex items-center gap-1 cursor-pointer transition-transform hover:translate-x-0.5"
                   >
-                    {training ? 'Training...' : 'Trigger Training \u2192'}
+                    {training ? 'Training Pipeline...' : 'Trigger Training \u2192'}
                   </button>
                 ) : (
                   <span className="text-xs text-text-muted">Awaiting Ingestion</span>
@@ -207,24 +209,24 @@ const Dashboard: React.FC = () => {
               </div>
 
               {/* Step 3 */}
-              <div className={`p-3 rounded-xl border transition-all ${
+              <div className={`p-4 rounded-2xl border transition-all duration-300 ${
                 isHealthy 
-                  ? 'bg-success-500/5 border-success-500/25' 
+                  ? 'bg-success-500/5 border-success-500/20 shadow-sm' 
                   : 'opacity-50 border-bg-border'
               }`}>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white ${
-                    isHealthy ? 'bg-success-500' : 'bg-bg-border text-text-muted'
+                <div className="flex items-center gap-2.5 mb-2">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${
+                    isHealthy ? 'bg-success-500 shadow-sm' : 'bg-bg-border text-text-muted'
                   }`}>
                     3
                   </span>
-                  <span className="font-semibold text-xs text-text-primary">Access Insights</span>
+                  <span className="font-semibold text-xs text-text-primary tracking-wide">Generate Analytics</span>
                 </div>
-                <p className="text-xs text-text-muted mb-2">Forecast consumption peaks, flag anomaly points, and generate optimal action items.</p>
+                <p className="text-xs text-text-muted leading-relaxed mb-3">Examine hourly load forecasts, flag out-of-bounds anomaly points, and read optimization checklist cards.</p>
                 {isHealthy ? (
-                  <span className="text-xs font-semibold text-success-500">✓ Pipelines Active</span>
+                  <span className="text-[11px] font-bold text-success-400">✓ Analytics Operational</span>
                 ) : (
-                  <span className="text-xs text-text-muted">Awaiting Setup Steps</span>
+                  <span className="text-xs text-text-muted">Awaiting Pipeline Activation</span>
                 )}
               </div>
             </div>
@@ -318,14 +320,14 @@ const Dashboard: React.FC = () => {
 
         {/* Top Recommendations */}
         <ChartCard title="Top Recommendations" subtitle={`${dashboard?.top_recommendations?.length ?? 0} active`}>
-          <div className="space-y-2 max-h-64 overflow-y-auto">
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
             {(dashboard?.top_recommendations ?? []).length > 0 ? (
               dashboard?.top_recommendations.map((rec, i) => (
-                <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg bg-bg-primary/60">
-                  <span className={getPriorityColor(rec.priority)}>{rec.priority}</span>
+                <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-bg-primary/45 border border-bg-border/30 hover:border-bg-border/60 hover:bg-bg-primary/70 transition-all duration-200 cursor-default">
+                  <span className={cn('text-[9px] py-0.5 px-1.5 font-bold uppercase tracking-wide rounded-md', getPriorityColor(rec.priority))}>{rec.priority}</span>
                   <div className="min-w-0">
-                    <p className="text-xs text-text-primary font-medium truncate">{rec.title}</p>
-                    <p className="text-xs text-text-muted truncate">{rec.category} · {rec.estimated_saving_pct}% savings</p>
+                    <p className="text-xs text-text-primary font-semibold truncate">{rec.title}</p>
+                    <p className="text-[10px] text-text-muted mt-0.5">{rec.category} · <span className="text-success-400 font-bold">{rec.estimated_saving_pct}% savings</span></p>
                   </div>
                 </div>
               ))
@@ -334,8 +336,8 @@ const Dashboard: React.FC = () => {
             )}
           </div>
           {(dashboard?.top_recommendations?.length ?? 0) > 0 && (
-            <button onClick={() => navigate('/optimization')} className="mt-3 flex items-center gap-1 text-xs text-electric-400 hover:text-electric-300 font-medium">
-              View all <ArrowRight size={12} />
+            <button onClick={() => navigate('/optimization')} className="mt-4 flex items-center gap-1.5 text-xs text-electric-400 hover:text-electric-300 font-semibold cursor-pointer group">
+              View all checklists <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
             </button>
           )}
         </ChartCard>

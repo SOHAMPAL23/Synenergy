@@ -7,6 +7,7 @@ import {
 import { Brain, Star } from 'lucide-react'
 import { mlService } from '../services/ml'
 import PageHeader, { ChartCard } from '../components/ui/PageHeader'
+import { cn } from '../utils/format'
 
 const COLORS = ['#3b82f6', '#22d3ee', '#8b5cf6', '#f59e0b', '#22c55e', '#ef4444', '#06b6d4', '#a78bfa', '#fb923c', '#34d399']
 
@@ -51,43 +52,46 @@ const Explainability: React.FC = () => {
       />
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-5 animate-slide-up">
         {[
-          { label: 'Features Analyzed', value: items.length },
-          { label: 'Top Feature', value: data?.top_features?.[0] ?? '—' },
-          { label: 'Model', value: data?.model_name ?? '—' },
-          { label: 'Explainer', value: data?.explainer_type ?? '—' },
+          { label: 'Features Analyzed', value: items.length, highlight: false },
+          { label: 'Top Contributor', value: data?.top_features?.[0]?.replace(/_/g, ' ') ?? '—', highlight: true },
+          { label: 'Model Pipeline', value: data?.model_name ?? '—', highlight: false },
+          { label: 'Explainer Config', value: data?.explainer_type ?? '—', highlight: false },
         ].map(kpi => (
-          <div key={kpi.label} className="glass-card p-4">
-            <p className="label mb-1">{kpi.label}</p>
-            <p className="text-sm font-semibold text-text-primary truncate">{kpi.value}</p>
+          <div key={kpi.label} className="glass-card p-5 border border-bg-border/60 hover:-translate-y-1 transition-all duration-300">
+            <p className="label mb-1.5">{kpi.label}</p>
+            <p className={cn("text-xs font-bold truncate tracking-wide text-text-primary capitalize", kpi.highlight && "text-electric-400 font-bold")}>
+              {kpi.value}
+            </p>
           </div>
         ))}
       </div>
 
       {/* Main charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 animate-slide-up">
         {/* SHAP Summary bar */}
         <ChartCard
           title="SHAP Feature Importance"
-          subtitle="Mean |SHAP| value per feature"
+          subtitle="Mean absolute contribution magnitude |SHAP| value per feature"
           loading={isLoading}
         >
           <ResponsiveContainer width="100%" height={320}>
             <BarChart
               data={[...items].slice(0, 12).reverse().map(item => ({
                 feature: item.feature.replace(/_/g, ' '),
-                shap: parseFloat(item.mean_abs_shap.toFixed(1)),
+                shap: parseFloat(item.mean_abs_shap.toFixed(2)),
                 rank: item.rank,
               }))}
               layout="vertical"
             >
               <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
-              <YAxis type="category" dataKey="feature" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} width={110} />
+              <XAxis type="number" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+              <YAxis type="category" dataKey="feature" tick={{ fontSize: 10, fill: 'var(--text-secondary)' }} width={120} />
               <Tooltip
-                formatter={(v: any) => [v.toFixed(2), 'Mean |SHAP|']}
+                formatter={(v: any) => [v.toFixed(3), 'Mean |SHAP|']}
                 contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)', borderRadius: 8, fontSize: 11 }}
+                labelStyle={{ fontWeight: 600 }}
               />
               <Bar dataKey="shap" shape={<WaterfallBar />} radius={[0, 4, 4, 0]}>
                 {items.slice(0, 12).map((_, i) => (
@@ -99,15 +103,15 @@ const Explainability: React.FC = () => {
         </ChartCard>
 
         {/* Radar chart */}
-        <ChartCard title="Feature Importance Radar" subtitle="Top 6 features normalized to 100%">
+        <ChartCard title="Feature Importance Radar" subtitle="Top 6 parameters normalized to 100% relative influence">
           <ResponsiveContainer width="100%" height={320}>
             <RadarChart data={radarData}>
               <PolarGrid stroke="var(--bg-border)" />
-              <PolarAngleAxis dataKey="feature" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} />
-              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <Radar name="Importance" dataKey="importance" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.25} strokeWidth={2} />
+              <PolarAngleAxis dataKey="feature" tick={{ fontSize: 10, fill: 'var(--text-secondary)', fontWeight: 500 }} />
+              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fontSize: 9, fill: 'var(--text-muted)' }} />
+              <Radar name="Importance" dataKey="importance" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} strokeWidth={2.5} />
               <Tooltip
-                formatter={(v: any) => [`${v.toFixed(1)}%`, 'Relative importance']}
+                formatter={(v: any) => [`${v.toFixed(1)}%`, 'Relative influence']}
                 contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)', borderRadius: 8, fontSize: 11 }}
               />
             </RadarChart>
@@ -117,19 +121,19 @@ const Explainability: React.FC = () => {
 
       {/* SHAP Waterfall */}
       <ChartCard
-        title="SHAP Waterfall (Top 8 Features)"
-        subtitle="Contribution magnitude of each feature to model output"
+        title="SHAP Cumulative Contributions (Top 8 Features)"
+        subtitle="Individual impact contribution magnitude of metrics on AutoML decisions"
       >
-        <ResponsiveContainer width="100%" height={220}>
+        <ResponsiveContainer width="100%" height={230}>
           <BarChart data={waterfallData}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text-secondary)' }} />
-            <YAxis tickFormatter={v => v.toFixed(0)} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+            <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--text-secondary)' }} />
+            <YAxis tickFormatter={v => v.toFixed(0)} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
             <Tooltip
-              formatter={(v: any) => [v.toFixed(2), 'Mean |SHAP|']}
+              formatter={(v: any) => [v.toFixed(3), 'Mean |SHAP|']}
               contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)', borderRadius: 8, fontSize: 11 }}
             />
-            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+            <Bar dataKey="value" radius={[6, 6, 0, 0]}>
               {waterfallData.map((entry, i) => (
                 <Cell key={i} fill={entry.fill} />
               ))}
@@ -139,36 +143,40 @@ const Explainability: React.FC = () => {
       </ChartCard>
 
       {/* Feature rank table */}
-      <ChartCard title="Complete Feature Ranking">
+      <ChartCard title="Complete Feature Contribution Ranking" subtitle="Ranked significance values across variables in training sets">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs text-left border-collapse">
             <thead>
-              <tr className="border-b border-bg-border">
-                {['Rank', 'Feature', 'Mean |SHAP|', 'Relative Importance'].map(col => (
-                  <th key={col} className="label py-2 pr-4 text-left">{col}</th>
+              <tr className="border-b border-bg-border/60 pb-2">
+                {['Rank', 'Param Variable', 'Mean |SHAP|', 'Relative Weight'].map(col => (
+                  <th key={col} className="label py-3 px-3">{col}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-bg-border/50">
+            <tbody className="divide-y divide-bg-border/30">
               {items.map((item, i) => {
                 const pct = (item.mean_abs_shap / maxShap) * 100
+                const isTop = i < 3
                 return (
-                  <tr key={item.feature} className="hover:bg-bg-hover/30 transition-colors">
-                    <td className="py-2 pr-4">
-                      {i === 0 && <Star size={12} className="inline text-warning-400 mr-1" />}
-                      <span className={i < 3 ? 'text-electric-500 font-semibold' : 'text-text-muted'}>#{item.rank}</span>
+                  <tr key={item.feature} className="hover:bg-bg-hover/20 transition-colors duration-150">
+                    <td className="py-3 px-3 font-semibold">
+                      {i === 0 && <Star size={11} className="inline text-warning-400 mr-1 pb-0.5 animate-pulse" />}
+                      <span className={isTop ? 'text-electric-400 font-bold' : 'text-text-muted'}>#{item.rank}</span>
                     </td>
-                    <td className="py-2 pr-4 font-mono text-xs text-text-secondary">{item.feature}</td>
-                    <td className="py-2 pr-4 text-text-primary font-medium">{item.mean_abs_shap.toFixed(2)}</td>
-                    <td className="py-2 pr-4 min-w-[120px]">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 bg-bg-hover rounded-full overflow-hidden">
+                    <td className="py-3 px-3 font-mono text-text-secondary">{item.feature}</td>
+                    <td className="py-3 px-3 text-text-primary font-bold">{item.mean_abs_shap.toFixed(3)}</td>
+                    <td className="py-3 px-3 min-w-[140px]">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex-1 h-2 bg-bg-border rounded-full overflow-hidden">
                           <div
-                            className="h-full rounded-full transition-all"
-                            style={{ width: `${pct}%`, background: COLORS[i % COLORS.length] }}
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{ 
+                              width: `${pct}%`, 
+                              background: `linear-gradient(90deg, ${COLORS[i % COLORS.length]}88 0%, ${COLORS[i % COLORS.length]} 100%)` 
+                            }}
                           />
                         </div>
-                        <span className="text-xs text-text-muted w-10 text-right">{pct.toFixed(1)}%</span>
+                        <span className="text-[10px] text-text-muted font-bold w-10 text-right">{pct.toFixed(1)}%</span>
                       </div>
                     </td>
                   </tr>
