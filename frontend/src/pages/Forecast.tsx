@@ -1,13 +1,13 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, Legend, ReferenceLine,
 } from 'recharts'
-import { Calendar } from 'lucide-react'
+import { Calendar, Zap } from 'lucide-react'
 import { mlService } from '../services/ml'
 import PageHeader, { ChartCard } from '../components/ui/PageHeader'
-import { formatDateTime, formatMW, downsample } from '../utils/format'
+import { formatDateTime, formatMW, downsample, cn } from '../utils/format'
 
 type Horizon = '24h' | '7d' | '30d'
 
@@ -155,25 +155,25 @@ const Forecast: React.FC = () => {
       </ChartCard>
 
       {/* What-If Simulator Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4 animate-slide-up">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-2 animate-slide-up">
         {/* Sliders Card */}
-        <div className="glass-card p-5 border border-bg-border lg:col-span-2">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="p-1.5 rounded-lg bg-electric-500/10 text-electric-400">
+        <div className="glass-card p-6 border border-bg-border/60 lg:col-span-2 shadow-lg">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="p-2 rounded-xl bg-electric-500/10 text-electric-400 shadow-sm">
               <Zap size={16} />
             </span>
             <div>
-              <h4 className="text-sm font-bold text-text-primary">What-If Forecast Simulator</h4>
-              <p className="text-xs text-text-muted">Simulate operational offsets and clean grid integrations on the forecast horizon.</p>
+              <h4 className="text-sm font-bold text-text-primary tracking-tight">What-If Forecast Simulator</h4>
+              <p className="text-xs text-text-muted mt-0.5">Simulate operational peak shavings and clean wind/solar offset integrations on the chart horizon.</p>
             </div>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-5">
             {/* Slider 1 */}
             <div>
-              <div className="flex justify-between text-xs mb-1.5">
-                <span className="text-text-secondary font-medium">Peak Shaving Intensity</span>
-                <span className="text-electric-400 font-semibold">{peakShaving}% reduction</span>
+              <div className="flex justify-between text-xs mb-1.5 font-medium">
+                <span className="text-text-secondary">Peak Shaving Intensity</span>
+                <span className="text-electric-400 font-bold">{peakShaving}% load shave</span>
               </div>
               <input 
                 type="range" 
@@ -181,16 +181,16 @@ const Forecast: React.FC = () => {
                 max="20" 
                 value={peakShaving} 
                 onChange={e => setPeakShaving(Number(e.target.value))}
-                className="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-electric-500"
+                className="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-electric-500 focus:ring-2 focus:ring-electric-500/20"
               />
-              <p className="text-[10px] text-text-muted mt-1">Shaves loads that exceed the median forecast baseline.</p>
+              <p className="text-[10px] text-text-muted mt-1.5 leading-relaxed">Shaves loads that exceed the median forecast baseline dynamically.</p>
             </div>
 
             {/* Slider 2 */}
             <div>
-              <div className="flex justify-between text-xs mb-1.5">
-                <span className="text-text-secondary font-medium">Solar & Wind Offset Shift</span>
-                <span className="text-emerald-400 font-semibold">{solarShift}% capacity</span>
+              <div className="flex justify-between text-xs mb-1.5 font-medium">
+                <span className="text-text-secondary">Solar & Wind Offset Shift</span>
+                <span className="text-emerald-400 font-bold">{solarShift}% capacity</span>
               </div>
               <input 
                 type="range" 
@@ -198,16 +198,16 @@ const Forecast: React.FC = () => {
                 max="30" 
                 value={solarShift} 
                 onChange={e => setSolarShift(Number(e.target.value))}
-                className="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                className="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
               />
-              <p className="text-[10px] text-text-muted mt-1">Offsets consumption during daylight generation windows (08:00 - 18:00).</p>
+              <p className="text-[10px] text-text-muted mt-1.5 leading-relaxed">Offsets consumption during peak daylight generation windows (08:00 - 18:00).</p>
             </div>
 
             {/* Slider 3 */}
             <div>
-              <div className="flex justify-between text-xs mb-1.5">
-                <span className="text-text-secondary font-medium">Grid Efficiency Factors</span>
-                <span className="text-cyan-400 font-semibold">{gridOpt}% gain</span>
+              <div className="flex justify-between text-xs mb-1.5 font-medium">
+                <span className="text-text-secondary">Grid Efficiency Factors</span>
+                <span className="text-cyan-400 font-bold">{gridOpt}% continuous gain</span>
               </div>
               <input 
                 type="range" 
@@ -215,66 +215,80 @@ const Forecast: React.FC = () => {
                 max="10" 
                 value={gridOpt} 
                 onChange={e => setGridOpt(Number(e.target.value))}
-                className="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                className="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
               />
-              <p className="text-[10px] text-text-muted mt-1">Applies standard continuous grid efficiency adjustments across all hours.</p>
+              <p className="text-[10px] text-text-muted mt-1.5 leading-relaxed">Applies standard continuous machine adjustments and distribution fixes across all hours.</p>
             </div>
           </div>
         </div>
 
         {/* Dynamic ROI Metrics Card */}
-        <div className="glass-card p-5 border border-emerald-500/25 bg-emerald-500/5 flex flex-col justify-between">
+        <div className="glass-card p-6 border border-success-500/25 bg-success-500/5 flex flex-col justify-between shadow-glow-green">
           <div>
-            <h4 className="text-sm font-bold text-emerald-400 mb-0.5">Estimated Simulation ROI</h4>
-            <p className="text-xs text-text-muted mb-4">Calculated offsets based on current slider configurations.</p>
+            <h4 className="text-sm font-bold text-success-400 tracking-tight">Simulation ROI Estimates</h4>
+            <p className="text-xs text-text-muted mt-0.5 mb-5">Calculated offsets based on current simulator values.</p>
             
-            <div className="space-y-3">
-              <div className="flex justify-between items-center border-b border-bg-border/40 pb-2">
+            <div className="space-y-3.5">
+              <div className="flex justify-between items-center border-b border-bg-border/45 pb-2.5">
                 <span className="text-xs text-text-secondary">Peak Shaved</span>
                 <span className="text-sm font-bold text-text-primary">{formatMW(peakShavedVal)}</span>
               </div>
               
-              <div className="flex justify-between items-center border-b border-bg-border/40 pb-2">
+              <div className="flex justify-between items-center border-b border-bg-border/45 pb-2.5">
                 <span className="text-xs text-text-secondary">Est. Cost Savings</span>
-                <span className="text-sm font-bold text-emerald-400">+${Math.round(estDailySavings).toLocaleString()}/day</span>
+                <span className="text-sm font-bold text-success-400">+${Math.round(estDailySavings).toLocaleString()}/day</span>
               </div>
 
-              <div className="flex justify-between items-center pb-2">
+              <div className="flex justify-between items-center pb-1">
                 <span className="text-xs text-text-secondary">CO₂ Offset</span>
                 <span className="text-sm font-bold text-cyan-400">{Math.round(estCarbonAbated).toLocaleString()} kg/day</span>
               </div>
             </div>
           </div>
 
-          <div className="text-[10px] text-text-muted mt-4 border-t border-bg-border/40 pt-2.5">
+          <div className="text-[10px] text-text-muted mt-5 border-t border-bg-border/40 pt-3">
             *Simulation calculations are generated locally on the selected forecast interval.
           </div>
         </div>
       </div>
 
       {/* Horizon comparison */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {(['24h', '7d', '30d'] as Horizon[]).map(h => {
           const pts = downsample(data?.forecasts?.[h]?.points ?? [], 30)
           const hData = pts.map(p => ({ ts: p.timestamp, v: p.forecast }))
+          const isCurrent = h === horizon
           return (
-            <ChartCard key={h} title={`${h} Outlook`} subtitle={data?.forecasts?.[h]?.model_name ?? '—'}>
-              <ResponsiveContainer width="100%" height={140}>
-                <LineChart data={hData}>
+            <ChartCard 
+              key={h} 
+              title={`${h} Outlook`} 
+              subtitle={data?.forecasts?.[h]?.model_name ?? '—'}
+              className={cn('hover:-translate-y-1 transition-all duration-300', isCurrent && 'border-electric-500/35 bg-electric-500/5')}
+            >
+              <ResponsiveContainer width="100%" height={120}>
+                <AreaChart data={hData}>
+                  <defs>
+                    <linearGradient id={`grad-${h}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={isCurrent ? '#3b82f6' : '#64748b'} stopOpacity={0.2} />
+                      <stop offset="95%" stopColor={isCurrent ? '#3b82f6' : '#64748b'} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
                   <XAxis dataKey="ts" hide />
                   <YAxis hide />
                   <Tooltip
                     formatter={(v: any) => formatMW(v as number)}
                     labelFormatter={(label: any) => formatDateTime(String(label))}
-                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)', borderRadius: 8, fontSize: 11 }}
+                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)', borderRadius: 8, fontSize: 10 }}
                     labelStyle={{ color: 'var(--text-muted)' }}
                   />
-                  <Line type="monotone" dataKey="v" stroke={h === horizon ? '#3b82f6' : 'var(--text-muted)'} strokeWidth={2} dot={false} name="Forecast" />
-                </LineChart>
+                  <Area type="monotone" dataKey="v" stroke={isCurrent ? '#3b82f6' : 'var(--text-muted)'} strokeWidth={2} fill={`url(#grad-${h})`} name="Forecast" />
+                </AreaChart>
               </ResponsiveContainer>
-              <div className="flex justify-between text-xs mt-2">
-                <span className="text-text-muted">{pts.length} points</span>
-                <span className="text-electric-500 font-medium cursor-pointer" onClick={() => setHorizon(h)}>View →</span>
+              <div className="flex justify-between items-center text-xs mt-3 pt-2.5 border-t border-bg-border/30">
+                <span className="text-text-muted">{pts.length} interval points</span>
+                <span className="text-electric-400 hover:text-electric-300 font-semibold cursor-pointer flex items-center gap-0.5" onClick={() => setHorizon(h)}>
+                  Focus {h} &rarr;
+                </span>
               </div>
             </ChartCard>
           )
@@ -283,27 +297,27 @@ const Forecast: React.FC = () => {
 
       {/* Model metrics table */}
       {data && (
-        <ChartCard title="Model Performance Metrics">
+        <ChartCard title="Model Performance Metrics" subtitle="AutoML accuracy rankings across standard test sets">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-bg-border">
-                  {['Horizon', 'Model', 'Points', 'Avg (MW)', 'Peak (MW)'].map(col => (
-                    <th key={col} className="label py-2 pr-4 text-left">{col}</th>
+                <tr className="border-b border-bg-border/55 pb-2">
+                  {['Horizon', 'Model Baseline', 'Data Points', 'Avg Consumption', 'Peak Load'].map(col => (
+                    <th key={col} className="label py-3 pr-4 text-left font-bold">{col}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-bg-border/50">
+              <tbody className="divide-y divide-bg-border/30">
                 {Object.entries(data.forecasts).map(([h, fc]) => {
                   const avg = fc.points.reduce((s, p) => s + p.forecast, 0) / Math.max(fc.points.length, 1)
                   const peak = Math.max(...fc.points.map(p => p.upper_bound))
                   return (
-                    <tr key={h} className="text-text-secondary hover:bg-bg-hover/30 transition-colors">
-                      <td className="py-2 pr-4 font-semibold text-electric-500">{h}</td>
-                      <td className="py-2 pr-4">{fc.model_name}</td>
-                      <td className="py-2 pr-4">{fc.points.length.toLocaleString()}</td>
-                      <td className="py-2 pr-4">{formatMW(avg)}</td>
-                      <td className="py-2 pr-4">{formatMW(peak)}</td>
+                    <tr key={h} className="text-text-secondary hover:bg-bg-hover/20 transition-colors">
+                      <td className="py-3 pr-4 font-bold text-electric-400 capitalize">{h} Horizon</td>
+                      <td className="py-3 pr-4 font-mono">{fc.model_name}</td>
+                      <td className="py-3 pr-4 text-text-muted">{fc.points.length.toLocaleString()} records</td>
+                      <td className="py-3 pr-4 font-semibold text-text-primary">{formatMW(avg)}</td>
+                      <td className="py-3 pr-4 font-semibold text-text-primary">{formatMW(peak)}</td>
                     </tr>
                   )
                 })}

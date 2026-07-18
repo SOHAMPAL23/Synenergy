@@ -6,7 +6,7 @@ import { Zap, Leaf, DollarSign, ChevronDown, ChevronUp } from 'lucide-react'
 import { mlService } from '../services/ml'
 import type { RecommendationItem } from '../services/ml'
 import PageHeader, { ChartCard } from '../components/ui/PageHeader'
-import { getPriorityColor } from '../utils/format'
+import { getPriorityColor, cn } from '../utils/format'
 
 const PRIORITY_COLORS: Record<string, string> = {
   HIGH: '#ef4444', MEDIUM: '#f59e0b', LOW: '#22c55e',
@@ -29,16 +29,16 @@ const RecCard: React.FC<{
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.06 }}
-      className={`glass-card p-4 transition-all ${
+      transition={{ delay: index * 0.05, ease: 'easeOut' }}
+      className={`glass-card p-4.5 border transition-all duration-300 ${
         isImplemented 
           ? 'border-emerald-500/30 bg-emerald-500/5 shadow-sm' 
-          : 'hover:border-electric-500/30'
+          : 'border-bg-border/60 hover:border-electric-500/30'
       }`}
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-4">
         {/* Workspace implementation toggle */}
-        <div className="flex-shrink-0 flex items-center pt-1 pr-1">
+        <div className="flex-shrink-0 flex items-center pt-1 pr-0.5">
           <input 
             type="checkbox" 
             checked={isImplemented} 
@@ -46,13 +46,13 @@ const RecCard: React.FC<{
               e.stopPropagation()
               onToggleImplement()
             }} 
-            className="w-4 h-4 rounded border-bg-border bg-bg-primary text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+            className="w-4 h-4 rounded-md border-bg-border bg-bg-primary text-emerald-500 focus:ring-emerald-500 cursor-pointer transition-all"
             title={isImplemented ? "Mark as planned" : "Mark as completed"}
           />
         </div>
 
         <div
-          className="flex-1 flex items-start gap-3 cursor-pointer min-w-0"
+          className="flex-1 flex items-start gap-3.5 cursor-pointer min-w-0"
           onClick={() => setOpen(o => !o)}
         >
           <div
@@ -62,20 +62,20 @@ const RecCard: React.FC<{
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
               {isImplemented ? (
-                <span className="badge-low text-[10px] uppercase font-bold py-0.5 px-1.5 flex items-center gap-0.5">
+                <span className="badge-low text-[9px] uppercase font-bold py-0.5 px-2 flex items-center gap-0.5 rounded-md">
                   ✓ Implemented
                 </span>
               ) : (
-                <span className={getPriorityColor(rec.priority)}>{rec.priority}</span>
+                <span className={cn('text-[9px] font-bold py-0.5 px-2 rounded-md uppercase tracking-wider', getPriorityColor(rec.priority))}>{rec.priority}</span>
               )}
-              <span className="badge-info">{rec.category}</span>
-              <span className="text-xs text-success-400 font-semibold">↓ {rec.estimated_saving_pct}%</span>
+              <span className="badge-info text-[9px] py-0.5 px-2 rounded-md">{rec.category}</span>
+              <span className="text-xs text-success-500 font-bold">↓ {rec.estimated_saving_pct}% efficiency</span>
             </div>
-            <h3 className={`text-sm font-semibold truncate ${isImplemented ? 'text-text-secondary line-through opacity-70' : 'text-text-primary'}`}>{rec.title}</h3>
-            <p className="text-xs text-text-secondary mt-0.5 line-clamp-2">{rec.description}</p>
+            <h3 className={`text-sm font-bold tracking-tight truncate ${isImplemented ? 'text-text-secondary line-through opacity-60' : 'text-text-primary'}`}>{rec.title}</h3>
+            <p className="text-xs text-text-muted mt-0.5 line-clamp-2">{rec.description}</p>
           </div>
-          <div className="flex-shrink-0 flex items-center gap-3 text-xs text-text-muted select-none">
-            <span className="text-success-400 font-medium">{rec.estimated_saving_pct}%</span>
+          <div className="flex-shrink-0 flex items-center gap-3.5 text-xs text-text-muted select-none">
+            <span className="text-success-400 font-bold">{rec.estimated_saving_pct}%</span>
             {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </div>
         </div>
@@ -87,23 +87,23 @@ const RecCard: React.FC<{
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-3 pl-8 border-l border-bg-border"
+            className="mt-4 pl-9 border-l border-bg-border/60"
           >
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div className="bg-success-500/10 border border-success-500/20 rounded-lg px-3 py-2">
-                <p className="text-xs text-text-muted mb-0.5">Est. Energy Saved</p>
-                <p className="text-sm font-semibold text-success-400">{estimatedKwh.toLocaleString()} kWh/day</p>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-success-500/10 border border-success-500/20 rounded-xl px-4 py-2.5">
+                <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mb-0.5">Est. Power Saved</p>
+                <p className="text-sm font-bold text-success-400">{estimatedKwh.toLocaleString()} kWh/day</p>
               </div>
-              <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-lg px-3 py-2">
-                <p className="text-xs text-text-muted mb-0.5">CO₂ Reduction</p>
-                <p className="text-sm font-semibold text-cyan-400">{co2} kg/day</p>
+              <div className="bg-cyan-500/10 border border-cyan-500/20 rounded-xl px-4 py-2.5">
+                <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mb-0.5">Carbon Offset</p>
+                <p className="text-sm font-bold text-cyan-400">{co2} kg/day</p>
               </div>
             </div>
-            <p className="text-xs text-text-muted font-medium mb-2">Action Items:</p>
-            <ul className="space-y-1.5">
+            <p className="text-xs text-text-secondary font-bold mb-2">Checklist Action Items:</p>
+            <ul className="space-y-2">
               {rec.action_items.map((a, i) => (
-                <li key={i} className="flex items-start gap-2 text-xs text-text-secondary">
-                  <span className="text-electric-400 mt-0.5 flex-shrink-0">→</span>
+                <li key={i} className="flex items-start gap-2.5 text-xs text-text-secondary">
+                  <span className="text-electric-400 mt-0.5 flex-shrink-0 font-bold">&rarr;</span>
                   {a}
                 </li>
               ))}
@@ -167,17 +167,17 @@ const Optimization: React.FC = () => {
       />
 
       {/* Summary KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-5 mb-1 animate-slide-up">
         {[
-          { label: 'Total Recommendations', value: data?.total ?? 0, icon: <Zap size={16} />, color: 'text-electric-400', accent: 'bg-electric-500/10 border-electric-500/20' },
-          { label: 'High Priority', value: data?.high_priority ?? 0, icon: <Zap size={16} />, color: 'text-danger-400', accent: 'bg-danger-500/10 border-danger-500/20' },
-          { label: 'Avg. Savings', value: `${totalSavingPct.toFixed(1)}%`, icon: <DollarSign size={16} />, color: 'text-success-400', accent: 'bg-success-500/10 border-success-500/20' },
-          { label: 'CO₂ Reduction', value: `${totalCO2.toFixed(0)} kg/d`, icon: <Leaf size={16} />, color: 'text-cyan-400', accent: 'bg-cyan-500/10 border-cyan-500/20' },
+          { label: 'Total Recommendations', value: data?.total ?? 0, icon: <Zap size={15} />, color: 'text-electric-400', accent: 'border-bg-border/60' },
+          { label: 'High Priority Warnings', value: data?.high_priority ?? 0, icon: <Zap size={15} />, color: 'text-danger-400', accent: 'border-bg-border/60 hover:border-danger-500/20' },
+          { label: 'Avg. Potential Savings', value: `${totalSavingPct.toFixed(1)}%`, icon: <DollarSign size={15} />, color: 'text-success-400', accent: 'border-bg-border/60 hover:border-success-500/20' },
+          { label: 'CO₂ Reduction Pot.', value: `${totalCO2.toFixed(0)} kg/d`, icon: <Leaf size={15} />, color: 'text-cyan-400', accent: 'border-bg-border/60 hover:border-cyan-500/20' },
         ].map(kpi => (
-          <div key={kpi.label} className={`glass-card p-4 border ${kpi.accent}`}>
+          <div key={kpi.label} className={`glass-card p-5 border ${kpi.accent}`}>
             <div className="flex items-center gap-2 mb-2">
               <span className={kpi.color}>{kpi.icon}</span>
-              <p className="label">{kpi.label}</p>
+              <p className="label text-[10px]">{kpi.label}</p>
             </div>
             <p className={`text-2xl font-display font-bold ${kpi.color}`}>{kpi.value}</p>
           </div>
@@ -185,37 +185,38 @@ const Optimization: React.FC = () => {
       </div>
 
       {/* Realized Savings Workspace Tracker */}
-      <div className="glass-card p-5 border border-emerald-500/30 bg-emerald-500/5 mb-6 flex flex-col md:flex-row items-center justify-between gap-6 animate-slide-up">
-        <div className="flex items-center gap-4 flex-1">
+      <div className="glass-card p-6 border border-emerald-500/25 bg-emerald-500/5 flex flex-col md:flex-row items-center justify-between gap-6 animate-slide-up shadow-glow-green">
+        <div className="flex items-center gap-5 flex-1 w-full">
           {/* Progress Ring */}
-          <div className="relative w-18 h-18 flex items-center justify-center flex-shrink-0">
+          <div className="relative w-20 h-20 flex items-center justify-center flex-shrink-0">
             <svg className="w-full h-full transform -rotate-90">
-              <circle cx="36" cy="36" r="30" stroke="var(--bg-border)" strokeWidth="6" fill="transparent" />
+              <circle cx="40" cy="40" r="34" stroke="var(--bg-border)" strokeWidth="6" fill="transparent" />
               <circle 
-                cx="36" 
-                cy="36" 
-                r="30" 
+                cx="40" 
+                cy="40" 
+                r="34" 
                 stroke="#10b981" 
                 strokeWidth="6" 
                 fill="transparent" 
-                strokeDasharray={`${2 * Math.PI * 30}`}
-                strokeDashoffset={`${2 * Math.PI * 30 * (1 - implementedPct / 100)}`}
-                className="transition-all duration-500 ease-out"
+                strokeDasharray={`${2 * Math.PI * 34}`}
+                strokeDashoffset={`${2 * Math.PI * 34 * (1 - implementedPct / 100)}`}
+                className="transition-all duration-700 ease-out"
+                strokeLinecap="round"
               />
             </svg>
-            <span className="absolute text-sm font-bold text-text-primary">{implementedPct}%</span>
+            <span className="absolute text-sm font-bold text-text-primary font-mono">{implementedPct}%</span>
           </div>
           <div>
-            <h4 className="text-sm font-bold text-text-primary flex items-center gap-1.5">
+            <h4 className="text-sm font-bold text-text-primary flex items-center gap-1.5 tracking-tight">
               <Leaf size={14} className="text-emerald-400" />
-              Implemented Optimization Workspace
+              Realized Savings Dashboard
             </h4>
             <p className="text-xs text-text-muted mt-0.5">
               Select recommendation checklists below as they are applied to track energy efficiency savings and greenhouse gas offsets.
             </p>
-            <div className="flex gap-4 mt-2 flex-wrap">
+            <div className="flex gap-4 mt-2.5 flex-wrap">
               <span className="text-xs text-text-muted">
-                Applied: <strong className="text-text-primary">{implementedIds.length}</strong> of {recs.length}
+                Applied: <strong className="text-text-primary">{implementedIds.length}</strong> of {recs.length} cards
               </span>
               <span className="text-xs text-text-muted">
                 Status: <strong className={implementedPct > 50 ? 'text-emerald-400 font-semibold' : implementedPct > 0 ? 'text-warning-400 font-semibold' : 'text-text-muted font-normal'}>
@@ -226,29 +227,29 @@ const Optimization: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex gap-4 w-full md:w-auto flex-wrap md:flex-nowrap justify-between border-t md:border-t-0 md:border-l border-bg-border/60 pt-4 md:pt-0 md:pl-6">
-          <div className="min-w-[100px]">
-            <p className="text-[10px] text-text-muted mb-0.5">Realized Power Saved</p>
+        <div className="flex gap-6 w-full md:w-auto flex-wrap md:flex-nowrap justify-between border-t md:border-t-0 md:border-l border-bg-border/40 pt-5 md:pt-0 md:pl-6">
+          <div className="min-w-[110px]">
+            <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mb-0.5">Realized Power Saved</p>
             <p className="text-sm font-bold text-emerald-400">{Math.round(realizedSavingsKwh).toLocaleString()} kWh/d</p>
           </div>
-          <div className="min-w-[100px]">
-            <p className="text-[10px] text-text-muted mb-0.5">Realized CO₂ Reduced</p>
+          <div className="min-w-[110px]">
+            <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mb-0.5">Realized CO₂ Saved</p>
             <p className="text-sm font-bold text-cyan-400">{Math.round(realizedCO2).toLocaleString()} kg/d</p>
           </div>
-          <div className="min-w-[100px]">
-            <p className="text-[10px] text-text-muted mb-0.5">Realized Cost Savings</p>
+          <div className="min-w-[110px]">
+            <p className="text-[10px] text-text-muted font-bold uppercase tracking-wider mb-0.5">Realized Financials</p>
             <p className="text-sm font-bold text-text-primary">${Math.round(realizedDollars).toLocaleString()}/d</p>
           </div>
         </div>
       </div>
 
       {/* Savings chart + Carbon reduction */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 animate-slide-up">
         <ChartCard title="Estimated Savings by Recommendation" className="lg:col-span-2" loading={isLoading}>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={240}>
             <BarChart data={chartData} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" horizontal={false} />
-              <XAxis type="number" tickFormatter={v => `${v}%`} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+              <XAxis type="number" tickFormatter={v => `${v}%`} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: 'var(--text-secondary)' }} width={130} />
               <Tooltip
                 formatter={(v: any) => [`${(v as number).toFixed(1)}%`, 'Energy Saving']}
@@ -264,41 +265,41 @@ const Optimization: React.FC = () => {
         </ChartCard>
 
         {/* Carbon reduction summary */}
-        <ChartCard title="Carbon Impact" subtitle="CO₂ equivalent reduction potential">
-          <div className="space-y-3">
+        <ChartCard title="Carbon Abatement Impact" subtitle="CO₂ equivalent reduction potential per recommendation">
+          <div className="space-y-3.5">
             {recs.slice(0, 5).map((r, i) => {
               const co2 = ((BASELINE_KWH * r.estimated_saving_pct / 100) * CARBON_FACTOR).toFixed(0)
               return (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: PRIORITY_COLORS[r.priority] }} />
+                <div key={i} className="flex items-center gap-3.5">
+                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm" style={{ background: PRIORITY_COLORS[r.priority] }} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-text-secondary truncate">{r.title}</p>
-                    <div className="h-1.5 bg-bg-hover rounded-full mt-0.5 overflow-hidden">
+                    <p className="text-xs text-text-secondary font-semibold truncate leading-tight">{r.title}</p>
+                    <div className="h-2 bg-bg-border rounded-full mt-1.5 overflow-hidden">
                       <div
                         className="h-full rounded-full"
                         style={{
                           width: `${r.estimated_saving_pct * 5}%`,
-                          background: `linear-gradient(90deg, #22c55e, #06b6d4)`,
+                          background: `linear-gradient(90deg, #10b981, #06b6d4)`,
                         }}
                       />
                     </div>
                   </div>
-                  <span className="text-xs text-cyan-500 font-medium flex-shrink-0">{co2} kg</span>
+                  <span className="text-xs text-cyan-400 font-bold flex-shrink-0">{co2} kg</span>
                 </div>
               )
             })}
-            <div className="border-t border-bg-border pt-2 flex justify-between text-xs">
-              <span className="text-text-muted">Total Daily</span>
-              <span className="text-cyan-500 font-semibold">{totalCO2.toFixed(0)} kg CO₂</span>
+            <div className="border-t border-bg-border/60 pt-3 flex justify-between items-center text-xs">
+              <span className="text-text-muted font-semibold uppercase tracking-wider text-[10px]">Total Potential</span>
+              <span className="text-cyan-400 font-bold text-sm">{totalCO2.toFixed(0)} kg CO₂ / day</span>
             </div>
           </div>
         </ChartCard>
       </div>
 
       {/* Recommendations list */}
-      <div>
-        <h2 className="section-title mb-4">All Recommendations</h2>
-        <div className="space-y-3">
+      <div className="animate-slide-up">
+        <h2 className="section-title mb-4.5 tracking-tight">Active Recommendations Checklist</h2>
+        <div className="space-y-3.5">
           {isLoading
             ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-16 rounded-xl" />)
             : recs.map((rec, i) => {
