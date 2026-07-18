@@ -30,35 +30,39 @@ const Login: React.FC = () => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="glass-card p-8"
+      className="glass-card p-8 border border-bg-border/60 shadow-xl"
     >
-      <h2 className="text-xl font-display font-semibold text-text-primary mb-1">Welcome back</h2>
-      <p className="text-sm text-text-secondary mb-6">Sign in to your EnerVision AI account</p>
+      <h2 className="text-2xl font-display font-bold text-text-primary mb-1 tracking-tight">Welcome back</h2>
+      <p className="text-xs text-text-muted mb-6">Sign in to your EnerVision AI account</p>
 
       {error && (
-        <div className="flex items-center gap-2 bg-danger-500/10 border border-danger-500/30 rounded-lg px-3 py-2.5 mb-4">
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-center gap-2 bg-danger-500/10 border border-danger-500/30 rounded-xl px-3.5 py-2.5 mb-4"
+        >
           <AlertCircle size={14} className="text-danger-400 flex-shrink-0" />
-          <p className="text-sm text-danger-400">{error}</p>
-        </div>
+          <p className="text-xs text-danger-400 font-medium">{error}</p>
+        </motion.div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="label block mb-1.5">Email</label>
+          <label className="label block mb-1.5 font-semibold text-text-secondary">Email address</label>
           <input
             type="email"
             required
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-electric-500/60 transition-colors"
+            className="w-full bg-bg-primary/60 border border-bg-border rounded-xl px-3.5 py-2.5 text-xs text-text-primary placeholder:text-text-muted/60 focus:border-electric-500/50 focus:ring-4 focus:ring-electric-500/10 transition-all outline-none"
           />
         </div>
 
         <div>
-          <label className="label block mb-1.5">Password</label>
+          <label className="label block mb-1.5 font-semibold text-text-secondary">Password</label>
           <div className="relative">
             <input
               type={showPw ? 'text' : 'password'}
@@ -66,14 +70,14 @@ const Login: React.FC = () => {
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-bg-primary border border-bg-border rounded-lg px-3 py-2.5 pr-10 text-sm text-text-primary placeholder:text-text-muted focus:border-electric-500/60 transition-colors"
+              className="w-full bg-bg-primary/60 border border-bg-border rounded-xl px-3.5 py-2.5 pr-11 text-xs text-text-primary placeholder:text-text-muted/60 focus:border-electric-500/50 focus:ring-4 focus:ring-electric-500/10 transition-all outline-none"
             />
             <button
               type="button"
               onClick={() => setShowPw(p => !p)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary cursor-pointer"
             >
-              {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+              {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
         </div>
@@ -81,17 +85,17 @@ const Login: React.FC = () => {
         <button
           type="submit"
           disabled={loading}
-          className="btn-primary w-full flex items-center justify-center gap-2 mt-2"
+          className="btn-primary w-full flex items-center justify-center gap-2 mt-4 text-xs font-bold cursor-pointer"
         >
-          {loading ? <Spinner size={16} /> : <Zap size={16} />}
+          {loading ? <Spinner size={14} className="text-white" /> : <Zap size={14} />}
           {loading ? 'Signing in…' : 'Sign In'}
         </button>
       </form>
 
-      <p className="text-center text-sm text-text-muted mt-6">
+      <p className="text-center text-xs text-text-muted mt-6">
         Don&apos;t have an account?{' '}
-        <Link to="/register" className="text-electric-400 hover:text-electric-300 font-medium">
-          Sign up
+        <Link to="/register" className="text-electric-400 hover:text-electric-300 font-semibold transition-colors">
+          Create an account
         </Link>
       </p>
     </motion.div>
