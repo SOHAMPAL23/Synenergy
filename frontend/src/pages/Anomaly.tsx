@@ -192,23 +192,23 @@ const Anomaly: React.FC = () => {
       </ChartCard>
 
       {/* Method breakdown + Severity distribution */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <ChartCard title="Method Breakdown" subtitle="Anomalies detected per algorithm">
-          <ResponsiveContainer width="100%" height={200}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-slide-up">
+        <ChartCard title="Method Breakdown" subtitle="Anomalies detected per algorithm baseline">
+          <ResponsiveContainer width="100%" height={210}>
             <BarChart data={(data?.method_breakdown ?? []).map(m => ({
               name: METHODS_LABELS[m.method] ?? m.method,
               count: m.count,
             }))}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <YAxis tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+              <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <Tooltip
                 contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)', borderRadius: 8, fontSize: 11 }}
-                labelStyle={{ color: 'var(--text-muted)' }}
+                labelStyle={{ color: 'var(--text-muted)', fontWeight: 600 }}
               />
-              <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="count" fill="#3b82f6" radius={[6, 6, 0, 0]}>
                 {(data?.method_breakdown ?? []).map((_, i) => (
-                  <Cell key={i} fill={['#3b82f6', '#22d3ee', '#8b5cf6', '#f59e0b', '#ef4444'][i % 5]} />
+                  <Cell key={i} fill={['#3b82f6', '#06b6d4', '#8b5cf6', '#f59e0b', '#ef4444'][i % 5]} />
                 ))}
               </Bar>
             </BarChart>
@@ -216,8 +216,8 @@ const Anomaly: React.FC = () => {
         </ChartCard>
 
         {/* Severity score distribution */}
-        <ChartCard title="Severity Score Distribution" subtitle="Anomaly score concentration">
-          <ResponsiveContainer width="100%" height={200}>
+        <ChartCard title="Severity Score Concentration" subtitle="Distribution metrics of active ensemble warnings">
+          <ResponsiveContainer width="100%" height={210}>
             <LineChart data={
               scatterData
                 .slice(0, 100)
@@ -225,16 +225,16 @@ const Anomaly: React.FC = () => {
             }>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--bg-border)" />
               <XAxis dataKey="i" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <YAxis domain={[0, 1]} tick={{ fontSize: 11, fill: 'var(--text-muted)' }} />
+              <YAxis domain={[0, 1]} tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
               <Tooltip
-                formatter={(v: any) => v.toFixed(4)}
+                formatter={(v: any) => v.toFixed(3)}
                 contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--bg-border)', borderRadius: 8, fontSize: 11 }}
               />
-              <ReferenceLine y={0.8} stroke="#ef4444" strokeDasharray="4 2" label={{ value: 'High', fill: '#ef4444', fontSize: 9 }} />
-              <ReferenceLine y={0.5} stroke="#f59e0b" strokeDasharray="4 2" label={{ value: 'Medium', fill: '#f59e0b', fontSize: 9 }} />
-              <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={2} dot={(p: any) => (
-                <circle key={p.key} cx={p.cx} cy={p.cy} r={3}
-                  fill={getSeverityColor(p.payload.severity)} opacity={0.9} />
+              <ReferenceLine y={0.8} stroke="#ef4444" strokeDasharray="4 2" strokeWidth={1.5} label={{ value: 'High', fill: '#ef4444', fontSize: 9, fontWeight: 700 }} />
+              <ReferenceLine y={0.5} stroke="#f59e0b" strokeDasharray="4 2" strokeWidth={1.5} label={{ value: 'Medium', fill: '#f59e0b', fontSize: 9, fontWeight: 700 }} />
+              <Line type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={2.5} dot={(p: any) => (
+                <circle key={p.key} cx={p.cx} cy={p.cy} r={3.5}
+                  fill={getSeverityColor(p.payload.severity)} stroke="var(--bg-card)" strokeWidth={1} opacity={0.95} />
               )} />
             </LineChart>
           </ResponsiveContainer>
@@ -242,37 +242,38 @@ const Anomaly: React.FC = () => {
       </div>
 
       {/* Heatmap */}
-      <ChartCard title="Anomaly Heatmap" subtitle="Day × hour distribution of detected anomalies">
+      <ChartCard title="Temporal Anomaly Heatmap" subtitle="Day × hour distribution pattern of flags in historical baseline">
         <div className="overflow-x-auto">
-          <div className="min-w-[640px]">
-            <div className="flex gap-1 mb-1 ml-10">
+          <div className="min-w-[680px] pr-2">
+            <div className="flex gap-1 mb-1.5 ml-10">
               {Array.from({ length: 24 }, (_, h) => (
-                <div key={h} className="w-6 text-center text-xs text-text-muted">{h % 6 === 0 ? `${h}h` : ''}</div>
+                <div key={h} className="w-6 text-center text-[9px] font-semibold text-text-muted font-mono">{h % 3 === 0 ? `${h}h` : ''}</div>
               ))}
             </div>
             {heatmap.map((row, day) => (
-              <div key={day} className="flex items-center gap-1 mb-0.5">
-                <span className="w-8 text-xs text-text-muted text-right pr-2">{DAYS[day]}</span>
+              <div key={day} className="flex items-center gap-1 mb-1">
+                <span className="w-8 text-[10px] font-semibold text-text-muted text-right pr-2 font-mono">{DAYS[day]}</span>
                 {row.map(cell => (
                   <div
                     key={cell.hour}
                     title={`${DAYS[cell.day]} ${cell.hour}:00 — ${cell.count} anomalies`}
-                    className="w-6 h-6 rounded-sm transition-all cursor-pointer hover:ring-1 hover:ring-electric-400"
+                    className="w-6 h-6 rounded transition-all cursor-pointer hover:ring-2 hover:ring-electric-500 hover:scale-110 z-10"
                     style={{
                       background: cell.count === 0
-                        ? 'var(--bg-secondary)'
-                        : `rgba(239,68,68,${0.15 + cell.pct * 0.85})`,
+                        ? 'var(--bg-border)'
+                        : `rgba(239, 68, 68, ${0.2 + cell.pct * 0.8})`,
+                      boxShadow: cell.count > 0 ? '0 1px 4px rgba(239,68,68,0.15)' : 'none'
                     }}
                   />
                 ))}
               </div>
             ))}
-            <div className="flex items-center gap-2 mt-3 ml-10">
-              <span className="text-xs text-text-muted">Low</span>
-              {[0.1, 0.3, 0.5, 0.7, 0.9, 1.0].map(p => (
-                <div key={p} className="w-5 h-5 rounded-sm" style={{ background: `rgba(239,68,68,${p})` }} />
+            <div className="flex items-center gap-2 mt-4 ml-10">
+              <span className="text-[10px] text-text-muted font-mono font-medium">Clear</span>
+              {[0.2, 0.4, 0.6, 0.8, 1.0].map(p => (
+                <div key={p} className="w-4 h-4 rounded-sm" style={{ background: `rgba(239,68,68,${p})` }} />
               ))}
-              <span className="text-xs text-text-muted">High</span>
+              <span className="text-[10px] text-text-muted font-mono font-medium">Critical</span>
             </div>
           </div>
         </div>
@@ -280,19 +281,20 @@ const Anomaly: React.FC = () => {
 
       {/* Triage Alert Queue Section */}
       <ChartCard 
-        title="Anomaly Alert Queue" 
-        subtitle={`${filteredAnomalies.length} active alerts matching filters`}
+        title="Active Incident Alert Queue" 
+        subtitle={`${filteredAnomalies.length} unresolved system warnings listed`}
+        className="shadow-lg border border-bg-border/60"
         actions={
           <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
             {/* Severity filter */}
-            <div className="flex gap-1 bg-bg-primary border border-bg-border rounded-lg p-0.5">
+            <div className="flex gap-0.5 bg-bg-primary border border-bg-border/70 rounded-lg p-0.5 shadow-sm">
               {(['all', 'high', 'medium', 'low'] as const).map(sev => (
                 <button 
                   key={sev} 
                   onClick={() => setSeverityFilter(sev)}
-                  className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-bold transition-all cursor-pointer ${
+                  className={`px-3 py-1 rounded-md text-[9px] uppercase font-bold tracking-wider transition-all cursor-pointer ${
                     severityFilter === sev 
-                      ? 'bg-electric-600 text-white' 
+                      ? 'bg-electric-500 text-white shadow-sm' 
                       : 'text-text-muted hover:text-text-primary'
                   }`}
                 >
@@ -302,12 +304,12 @@ const Anomaly: React.FC = () => {
             </div>
 
             {/* Show Acknowledged Switch */}
-            <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer hover:text-text-primary select-none whitespace-nowrap">
+            <label className="flex items-center gap-2 text-xs text-text-muted cursor-pointer hover:text-text-primary select-none whitespace-nowrap">
               <input 
                 type="checkbox" 
                 checked={showAcknowledged} 
                 onChange={(e) => setShowAcknowledged(e.target.checked)}
-                className="w-3.5 h-3.5 rounded border-bg-border bg-bg-primary text-electric-600 focus:ring-electric-500 cursor-pointer"
+                className="w-4 h-4 rounded border-bg-border bg-bg-primary/50 text-electric-500 focus:ring-electric-500 cursor-pointer transition-all"
               />
               Show Resolved
             </label>
@@ -315,7 +317,7 @@ const Anomaly: React.FC = () => {
             {/* Export Button */}
             <button 
               onClick={handleExportReport} 
-              className="btn-secondary text-[11px] px-2.5 py-1 flex items-center gap-1 cursor-pointer whitespace-nowrap"
+              className="btn-secondary text-[11px] px-3.5 py-1.5 flex items-center gap-1 cursor-pointer whitespace-nowrap"
               disabled={filteredAnomalies.length === 0}
             >
               Export Report
@@ -323,44 +325,44 @@ const Anomaly: React.FC = () => {
           </div>
         }
       >
-        <div className="overflow-x-auto max-h-96">
-          <table className="w-full text-sm text-left border-collapse">
+        <div className="overflow-x-auto max-h-96 pr-1">
+          <table className="w-full text-xs text-left border-collapse">
             <thead>
-              <tr className="border-b border-bg-border text-xs">
-                <th className="label py-2.5 px-3">Triage</th>
-                <th className="label py-2.5 px-3">Time Detected</th>
-                <th className="label py-2.5 px-3">Measured Load</th>
-                <th className="label py-2.5 px-3">Confidence Score</th>
-                <th className="label py-2.5 px-3">Severity</th>
-                <th className="label py-2.5 px-3">Resolution</th>
+              <tr className="border-b border-bg-border/50 text-[10px]">
+                <th className="label py-3 px-3">Triage</th>
+                <th className="label py-3 px-3">Time Detected</th>
+                <th className="label py-3 px-3">Measured Load</th>
+                <th className="label py-3 px-3">Confidence Score</th>
+                <th className="label py-3 px-3">Severity</th>
+                <th className="label py-3 px-3">Resolution</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-bg-border/40">
+            <tbody className="divide-y divide-bg-border/30">
               {filteredAnomalies.slice(0, 100).map((p) => {
                 const isAck = acknowledgedKeys.includes(p.timestamp)
                 return (
-                  <tr key={p.timestamp} className={`hover:bg-bg-hover/20 transition-colors ${isAck ? 'opacity-50' : ''}`}>
-                    <td className="py-2.5 px-3">
+                  <tr key={p.timestamp} className={`hover:bg-bg-hover/20 transition-colors duration-150 ${isAck ? 'opacity-40' : ''}`}>
+                    <td className="py-3 px-3">
                       <input 
                         type="checkbox" 
                         checked={isAck} 
                         onChange={() => toggleAcknowledge(p.timestamp)}
-                        className="w-4 h-4 rounded border-bg-border bg-bg-primary text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                        className="w-4 h-4 rounded border-bg-border bg-bg-primary text-emerald-500 focus:ring-emerald-500 cursor-pointer"
                         title={isAck ? "Re-open incident" : "Acknowledge and resolve incident"}
                       />
                     </td>
-                    <td className="py-2.5 px-3 font-medium text-text-primary text-xs">
+                    <td className="py-3 px-3 font-semibold text-text-primary">
                       {formatDateTime(p.timestamp)}
                     </td>
-                    <td className="py-2.5 px-3 text-text-secondary text-xs font-mono">
+                    <td className="py-3 px-3 text-text-secondary font-mono">
                       {formatMW(p.value)}
                     </td>
-                    <td className="py-2.5 px-3 text-text-muted text-xs">
-                      {(p.anomaly_score * 100).toFixed(0)}% ensemble
+                    <td className="py-3 px-3 text-text-muted font-medium">
+                      {(p.anomaly_score * 100).toFixed(0)}% ensemble agreement
                     </td>
-                    <td className="py-2.5 px-3">
+                    <td className="py-3 px-3">
                       <span 
-                        className="px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                        className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider"
                         style={{ 
                           color: getSeverityColor(p.severity),
                           background: `${getSeverityColor(p.severity)}15`,
@@ -370,11 +372,11 @@ const Anomaly: React.FC = () => {
                         {p.severity}
                       </span>
                     </td>
-                    <td className="py-2.5 px-3 text-xs">
+                    <td className="py-3 px-3 font-semibold">
                       {isAck ? (
-                        <span className="text-emerald-500 font-semibold flex items-center gap-0.5">✓ Resolved</span>
+                        <span className="text-emerald-500 flex items-center gap-0.5">✓ Resolved</span>
                       ) : (
-                        <span className="text-warning-500 font-semibold flex items-center gap-0.5">⚠ Open Alert</span>
+                        <span className="text-warning-500 flex items-center gap-0.5">⚠ Open Alert</span>
                       )}
                     </td>
                   </tr>
@@ -382,7 +384,7 @@ const Anomaly: React.FC = () => {
               })}
               {filteredAnomalies.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-text-muted">
+                  <td colSpan={6} className="py-14 text-center text-text-muted font-medium">
                     No active anomalies found matching filters.
                   </td>
                 </tr>
@@ -391,7 +393,7 @@ const Anomaly: React.FC = () => {
           </table>
         </div>
         {filteredAnomalies.length > 100 && (
-          <p className="text-[10px] text-text-muted mt-2">Showing first 100 anomalies in queue.</p>
+          <p className="text-[10px] text-text-muted mt-3 font-mono">*Showing first 100 active alerts in database queue.</p>
         )}
       </ChartCard>
     </div>
