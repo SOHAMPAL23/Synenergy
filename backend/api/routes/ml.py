@@ -5,7 +5,7 @@ POST /train, GET /forecast, GET /anomalies, GET /recommendations, GET /explanati
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.api.deps import get_current_user_id, require_analyst_or_above
@@ -18,7 +18,7 @@ from backend.schemas.schemas import (
     ExplanationResponse,
     PredictionRequest, PredictionResponse,
 )
-from backend.services import MLService
+from backend.services.services import MLService, run_ml_pipeline_background
 
 router = APIRouter(tags=["ML Pipeline"])
 
@@ -38,23 +38,29 @@ def _ml_service(user_id: str, db: AsyncSession) -> MLService:
     ),
 )
 async def train(
+    background_tasks: BackgroundTasks,
     req: TrainRequest = TrainRequest(),
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
 ):
     """
-    Trigger ML training pipeline on uploaded energy data.
+    Trigger ML training pipeline on uploaded energy data in the background.
 
     Requires at least one CSV upload via `POST /upload`.
     """
     try:
-        return await _ml_service(user_id, db).train(req)
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        req_dict = req.model_dump() if hasattr(req, "model_dump") else req.dict()
+        background_tasks.add_task(run_ml_pipeline_background, user_id, req_dict)
+        return TrainResponse(
+            status="processing",
+            message="Training pipeline started in the background. Check dashboard for updates.",
+            best_model="Processing...",
+            metrics={},
+            training_time_seconds=0.0,
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Training failed: {e}",
+            detail=f"Failed to start training: {e}",
         )
 
 
