@@ -11,6 +11,7 @@ from ml.forecasting.base_model import BaseModel
 from ml.forecasting.linear_model import LinearRegressionModel
 from ml.forecasting.random_forest_model import RandomForestModel
 from ml.forecasting.xgboost_model import XGBoostModel
+from ml.forecasting.lightgbm_model import LightGBMModel
 from ml.forecasting.statistical_models import ARIMAModel, SARIMAModel, SARIMAXModel
 from ml.utils.config_loader import config
 from ml.utils.helpers import metrics_table, time_split
@@ -35,6 +36,7 @@ class ModelSelector:
         "linear_regression": LinearRegressionModel,
         "random_forest": RandomForestModel,
         "xgboost": XGBoostModel,
+        "lightgbm": LightGBMModel,
     }
 
     # Statistical models that take the raw target series
