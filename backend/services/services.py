@@ -8,6 +8,7 @@ import os
 import uuid
 import time
 import logging
+import asyncio
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -243,27 +244,59 @@ class MLService:
         from ml.utils.helpers import time_split
         from ml.utils.config_loader import config as ml_cfg
 
-        cleaner = DataCleaner(cfg=ml_cfg)
-        df_clean = cleaner.clean(df)
+        def _run_ml_math():
+            cleaner = DataCleaner(cfg=ml_cfg)
+            df_clean = cleaner.clean(df)
 
-        fe = FeatureEngineer(cfg=ml_cfg)
-        df_feat = fe.transform(df_clean)
-        feat_cols = fe.get_feature_columns(df_feat)
-        X = df_feat[feat_cols]
-        y = df_feat[ml_cfg.data.target_column]
+            fe = FeatureEngineer(cfg=ml_cfg)
+            df_feat = fe.transform(df_clean)
+            feat_cols = fe.get_feature_columns(df_feat)
+            X = df_feat[feat_cols]
+            y = df_feat[ml_cfg.data.target_column]
 
-        X_train, X_test = time_split(X, test_size=0.2)
-        y_train = y.loc[X_train.index]
-        y_test = y.loc[X_test.index]
+            X_train, X_test = time_split(X, test_size=0.2)
+            y_train = y.loc[X_train.index]
+            y_test = y.loc[X_test.index]
 
-        selector = ModelSelector(cfg=ml_cfg)
-        best_model, metrics = selector.run(X_train, y_train, X_test, y_test)
+            selector = ModelSelector(cfg=ml_cfg)
+            best_model, metrics = selector.run(X_train, y_train, X_test, y_test)
+            
+            from ml.forecasting.forecast_generator import ForecastGenerator
+            fg = ForecastGenerator(best_model, fe, cfg=ml_cfg)
+            forecasts = fg.generate(df_clean)
+            
+            from ml.anomaly_detection.anomaly_detector import AnomalyDetector
+            detector = AnomalyDetector(cfg=ml_cfg)
+            anomaly_df = detector.detect(df_clean)
+            
+            from ml.recommendation_engine.recommender import RecommendationEngine
+            engine_rec = RecommendationEngine(cfg=ml_cfg)
+            recs = engine_rec.generate(
+                forecast_df=forecasts.get("24h"),
+                history_df=df_clean,
+                anomaly_df=anomaly_df,
+            )
+            
+            # Serialize best model, feature engineer, and metadata
+            from ml.models.serializer import ModelSerializer
+            ser = ModelSerializer(cfg=ml_cfg)
+            ser.save_model(best_model, f"best_model_{self._user_id}")
+            ser.save_model(fe, f"feature_engineer_{self._user_id}")
+            
+            metadata_dict = {
+                "user_id": str(self._user_id),
+                "best_model": best_model.name,
+                "metrics": {k: {m: round(v, 4) for m, v in vals.items()} for k, vals in metrics.items()},
+                "trained_at": datetime.now(timezone.utc).isoformat(),
+            }
+            ser.save_metadata(metadata_dict, name=f"metadata_{self._user_id}")
+            
+            return best_model.name, metrics, forecasts, recs
+            
+        best_model_name, metrics, forecasts, recs = await asyncio.to_thread(_run_ml_math)
 
         # ── Persist forecasts ────────────────────────────────────────────
         await self._forecast_repo.mark_all_old(self._user_id)
-        from ml.forecasting.forecast_generator import ForecastGenerator
-        fg = ForecastGenerator(best_model, fe, cfg=ml_cfg)
-        forecasts = fg.generate(df_clean)
         from backend.models.orm import Forecast
 
         for horizon, fc_df in forecasts.items():
@@ -289,23 +322,10 @@ class MLService:
             )
             self._db.add(fc_orm)
 
-        # ── Compute anomalies in-memory for recommendation rules ──────────
-        from ml.anomaly_detection.anomaly_detector import AnomalyDetector
-
-        detector = AnomalyDetector(cfg=ml_cfg)
-        anomaly_df = detector.detect(df_clean)
-
         # ── Persist recommendations ───────────────────────────────────────
-        from ml.recommendation_engine.recommender import RecommendationEngine
         from backend.models.orm import Recommendation as RecOrm
 
         await self._rec_repo.deactivate_all_for_user(self._user_id)
-        engine_rec = RecommendationEngine(cfg=ml_cfg)
-        recs = engine_rec.generate(
-            forecast_df=forecasts.get("24h"),
-            history_df=df_clean,
-            anomaly_df=anomaly_df,
-        )
         for r in recs:
             self._db.add(RecOrm(
                 user_id=self._user_id,
@@ -320,20 +340,6 @@ class MLService:
         await self._db.flush()
         elapsed = time.perf_counter() - t0
 
-        # ── Serialize best model, feature engineer, and metadata ──
-        from ml.models.serializer import ModelSerializer
-        ser = ModelSerializer(cfg=ml_cfg)
-        ser.save_model(best_model, f"best_model_{self._user_id}")
-        ser.save_model(fe, f"feature_engineer_{self._user_id}")
-        
-        metadata_dict = {
-            "user_id": str(self._user_id),
-            "best_model": best_model.name,
-            "metrics": {k: {m: round(v, 4) for m, v in vals.items()} for k, vals in metrics.items()},
-            "trained_at": datetime.now(timezone.utc).isoformat(),
-        }
-        ser.save_metadata(metadata_dict, name=f"metadata_{self._user_id}")
-
         from backend.schemas.schemas import ModelMetrics
         metrics_out = {
             name: ModelMetrics(rmse=m["rmse"], mae=m["mae"], mape=m["mape"])
@@ -342,10 +348,10 @@ class MLService:
 
         return TrainResponse(
             status="success",
-            best_model=best_model.name,
+            best_model=best_model_name,
             metrics=metrics_out,
             training_time_seconds=round(elapsed, 2),
-            message=f"Training complete. Best model: {best_model.name}",
+            message=f"Training complete. Best model: {best_model_name}",
         )
 
     async def get_forecasts(self) -> ForecastsResponse:
@@ -678,3 +684,19 @@ class MLService:
 
         preds = best_model.predict(df_input)
         return [float(p) for p in preds]
+
+async def run_ml_pipeline_background(user_id: str, req_dict: dict):
+    from backend.database.session import AsyncSessionLocal
+    from backend.schemas.schemas import TrainRequest
+    import traceback
+    
+    logger.info(f"Background ML training started for user {user_id}")
+    try:
+        async with AsyncSessionLocal() as db:
+            service = MLService(db, user_id)
+            await service.train(TrainRequest(**req_dict))
+            await db.commit()
+            logger.info(f"Background ML training completed for user {user_id}")
+    except Exception as e:
+        logger.error(f"Background ML training failed for user {user_id}: {e}")
+        logger.error(traceback.format_exc())
